@@ -1,0 +1,9 @@
+build/*.o
+lib/*.a
+lib/*.so
+lib/*.so.*
+doc/*.aux
+doc/*.log
+doc/*.toc
+doc/basiclu_*.tex
+example/maxvolume
