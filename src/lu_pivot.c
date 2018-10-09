@@ -619,7 +619,7 @@ static lu_int lu_pivot_small(struct lu *this)
         for (pos = 1; pos <= cnz1; pos++)
         {
             x = fabs(work[pos]);
-            if (x && x > droptol)
+            if (x > droptol)
             {
                 Windex[put] = wi[pos];
                 Wvalue[put++] = work[pos];
