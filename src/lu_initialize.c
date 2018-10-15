@@ -38,6 +38,7 @@ void lu_initialize(lu_int m, lu_int *istore, double *xstore)
     xstore[BASICLU_COMPRESSION_THRESHOLD]   = 0.5;
     xstore[BASICLU_SPARSE_THRESHOLD]        = 0.05;
     xstore[BASICLU_REMOVE_COLUMNS]          = 0;
+    xstore[BASICLU_SEARCH_ROWS]             = 1;
 
     /* initialize global counters */
     xstore[BASICLU_NFACTORIZE]              = 0;

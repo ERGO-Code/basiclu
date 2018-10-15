@@ -57,7 +57,8 @@ lu_int lu_load(
     this->stretch               = xstore[BASICLU_STRETCH];
     this->compress_thres        = xstore[BASICLU_COMPRESSION_THRESHOLD];
     this->sparse_thres          = xstore[BASICLU_SPARSE_THRESHOLD];
-    this->remove_cols           = xstore[BASICLU_REMOVE_COLUMNS];
+    this->remove_cols           = xstore[BASICLU_REMOVE_COLUMNS] != 0;
+    this->search_rows           = xstore[BASICLU_SEARCH_ROWS] != 0;
 
     /* user readable */
     this->m = m                 = xstore[BASICLU_DIM];

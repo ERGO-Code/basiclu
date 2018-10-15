@@ -33,6 +33,7 @@ struct lu
     double compress_thres;
     double sparse_thres;
     lu_int remove_cols;
+    lu_int search_rows;
 
     /* user readable */
     lu_int m;

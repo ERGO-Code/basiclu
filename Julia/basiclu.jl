@@ -53,6 +53,7 @@ const BASICLU_STRETCH = 11
 const BASICLU_COMPRESSION_THRESHOLD = 12
 const BASICLU_SPARSE_THRESHOLD = 13
 const BASICLU_REMOVE_COLUMNS = 14
+const BASICLU_SEARCH_ROWS = 15
 
 # user readable from xstore (offset by 1)
 const BASICLU_DIM = 65

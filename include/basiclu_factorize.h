@@ -109,6 +109,12 @@ Parameters:
         xstore[BASICLU_MAXN_SERACH_PIVOT] rows or columns if a numerically
         stable pivot element has been found. Default: 3
 
+    xstore[BASICLU_SEARCH_ROWS]
+
+        If xstore[BASICLU_SEARCH_ROWS] is zero, then the Markowitz search only
+        scans columns. If nonzero, then both columns and rows are searched in
+        increasing order of number of entries. Default: 1
+
     xstore[BASICLU_PAD]
     xstore[BASICLU_STRETCH]
 

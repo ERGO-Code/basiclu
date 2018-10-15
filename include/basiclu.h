@@ -69,6 +69,7 @@ typedef int64_t lu_int;
 #define BASICLU_COMPRESSION_THRESHOLD 11
 #define BASICLU_SPARSE_THRESHOLD 12
 #define BASICLU_REMOVE_COLUMNS 13
+#define BASICLU_SEARCH_ROWS 14
 
 /* user readable */
 #define BASICLU_DIM 64

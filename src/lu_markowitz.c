@@ -44,7 +44,7 @@ lu_int lu_markowitz(struct lu *this)
     const double abstol             = this->abstol;
     const double reltol             = this->reltol;
     const lu_int maxsearch          = this->maxsearch;
-    const lu_int search_rows        = 1; /* might become a user parameter */
+    const lu_int search_rows        = this->search_rows;
 
     lu_int i, j, pos, where, inext, nz, pivot_row, pivot_col;
     lu_int nsearch, cheap, found;
