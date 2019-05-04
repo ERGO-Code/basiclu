@@ -453,36 +453,4 @@ function update(this::BLU, xtbl::cdbl)
     return this.xstore[BASICLU_PIVOT_ERROR]
 end
 
-# =============================================================================
-# crash_basis
-# =============================================================================
-
-function crash_basis(A::spmatrix, volumetol::cdbl=0.9, dscale=C_NULL)
-    m,n = size(A)
-    Ap = A.colptr - 1
-    Ai = A.rowval - 1
-    Ax = A.nzval                # don't need a copy
-    basis = Array{cint}(m)
-    if dscale != C_NULL
-        @assert typeof(dscale) == cvec
-        @assert length(dscale) == m+n
-        @assert all(dscale .> 0)
-    end
-    condest = Ref{cdbl}(0)
-    err = ccall((:basiclu_crash_basis, "libbasiclu.so"), cint,
-                (cint, cint, cint_ptr, cint_ptr, cint_ptr, cint_ptr,
-                 cdbl, cdbl_ptr, cdbl_ptr),
-                m, n, Ap, Ai, Ax, basis,
-                volumetol, dscale, condest)
-    if err != BASICLU_OK
-        msg = @sprintf("basiclu_crash_basis() status code: %d", err)
-        error(msg)
-    end
-    condest = condest[]
-    basis[:] += 1
-    nslack = sum(basis .> n)
-    @printf(" %d slack variables in basis, condest = %.2e\n", nslack, condest)
-    return basis
-end
-
 end
