@@ -75,7 +75,6 @@ lu_int lu_pivot(struct lu *this)
     const lu_int *Wbegin    = this->Wbegin;
     const lu_int *Wend      = this->Wend;
     const lu_int *Uindex    = this->Uindex;
-    const double *Uvalue    = this->Uvalue;
     const lu_int nz_col     = Wend[pivot_col] - Wbegin[pivot_col];
     const lu_int nz_row     = Wend[m+pivot_row] - Wbegin[m+pivot_row];
 
@@ -129,16 +128,14 @@ lu_int lu_pivot(struct lu *this)
 
     /* Remove columns from active submatrix whose maximum entry has dropped
        below absolute pivot tolerance. */
-    if (status == BASICLU_OK && this->remove_cols)
+    if (status == BASICLU_OK)
     {
         for (pos = Ubegin[rank]; pos < Ubegin[rank+1]; pos++)
         {
             j = Uindex[pos];
             assert(j != pivot_col);
-            if (colmax[j] == 0.0 || colmax[j] <= this->abstol)
-            {
+            if (colmax[j] == 0.0 || colmax[j] < this->abstol)
                 lu_remove_col(this, j);
-            }
         }
     }
 
@@ -1255,4 +1252,6 @@ static void lu_remove_col(struct lu *this, lu_int j)
     Wend[j] = cbeg;
     lu_list_remove(colcount_flink, colcount_blink, j);
     lu_list_add(j, 0, colcount_flink, colcount_blink, m);
+
+    this->rankdef++;
 }

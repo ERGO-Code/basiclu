@@ -12,14 +12,13 @@
 lu_int lu_factorize_bump(struct lu *this)
 {
     const lu_int m  = this->m;
-    lu_int rank     = this->rank;
     lu_int *pinv    = this->pinv;
     lu_int *qinv    = this->qinv;
 
     lu_int pivot_row, pivot_col;
     lu_int status = BASICLU_OK;
 
-    while (rank < m)
+    while (this->rank + this->rankdef < m)
     {
         /*
          * Find pivot element. Markowitz search need not be called if the
@@ -28,8 +27,7 @@ lu_int lu_factorize_bump(struct lu *this)
          */
         if (this->pivot_col < 0)
             lu_markowitz(this);
-        if (this->pivot_col < 0)
-            break;
+        assert(this->pivot_col >= 0);
         pivot_row = this->pivot_row;
         pivot_col = this->pivot_col;
         assert(pinv[pivot_row] == -1);
@@ -40,11 +38,11 @@ lu_int lu_factorize_bump(struct lu *this)
         if (status != BASICLU_OK)
             break;
 
-        pinv[pivot_row] = rank;
-        qinv[pivot_col] = rank;
+        pinv[pivot_row] = this->rank;
+        qinv[pivot_col] = this->rank;
         this->pivot_col = -1;
         this->pivot_row = -1;
-        this->rank = ++rank;
+        this->rank++;
     }
 
     return status;

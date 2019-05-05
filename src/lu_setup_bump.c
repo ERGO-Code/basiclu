@@ -60,7 +60,7 @@ lu_int lu_setup_bump(
     const lu_int Bnz        = this->matrix_nz;
     const lu_int Lnz        = this->Lbegin_p[rank] - rank;
     const lu_int Unz        = this->Ubegin[rank];
-    const lu_int bump_nz    = Bnz-Lnz-Unz-rank;
+    const double abstol     = this->abstol;
     const lu_int pad        = this->pad;
     const double stretch    = this->stretch;
     lu_int *colcount_flink  = this->colcount_flink;
@@ -80,7 +80,8 @@ lu_int lu_setup_bump(
     double *colmax          = this->col_pivot;
     lu_int *iwork0          = this->iwork0;
 
-    lu_int i, j, pos, put, nz, cnz, rnz, need;
+    lu_int bump_nz = Bnz-Lnz-Unz-rank; /* will change if columns are dropped */
+    lu_int i, j, pos, put, cnz, rnz, need, rankdef;
     double cmx;
 
     assert(Lnz >= 0);
@@ -109,7 +110,7 @@ lu_int lu_setup_bump(
      * Build columnwise storage. Build row counts in iwork0.
      */
     lu_list_init(colcount_flink, colcount_blink, m, m+2);
-    nz = 0;                     /* count nz in bump for assert() */
+    rankdef = 0;
     put = 0;
     for (j = 0; j < m; j++)
     {
@@ -117,27 +118,43 @@ lu_int lu_setup_bump(
             continue;
         cnz = 0;                /* count nz per column */
         cmx = 0.0;              /* find column maximum */
-        Wbegin[j] = put;
         for (pos = Bbegin[j]; pos < Bend[j]; pos++)
         {
             i = Bi[pos];
             if (pinv[i] >= 0)
                 continue;
-            Windex[put] = i;
-            Wvalue[put++] = Bx[pos];
             cmx = fmax(cmx, fabs(Bx[pos]));
             cnz++;
-            iwork0[i]++;
         }
-        Wend[j] = put;
-        colmax[j] = cmx;
-        lu_list_remove(Wflink, Wblink, j); /* reappend line to list end */
-        lu_list_add(j, 0, Wflink, Wblink, 2*m);
-        put += stretch*cnz + pad;
-        lu_list_add(j, cnz, colcount_flink, colcount_blink, m);
-        nz += cnz;
+        if (cmx == 0.0 || cmx < abstol)
+        {
+            /* Leave column of active submatrix empty. */
+            colmax[j] = 0.0;
+            lu_list_add(j, 0, colcount_flink, colcount_blink, m);
+            bump_nz -= cnz;
+            rankdef++;
+        }
+        else
+        {
+            /* Copy column into active submatrix. */
+            colmax[j] = cmx;
+            lu_list_add(j, cnz, colcount_flink, colcount_blink, m);
+            Wbegin[j] = put;
+            for (pos = Bbegin[j]; pos < Bend[j]; pos++)
+            {
+                i = Bi[pos];
+                if (pinv[i] >= 0)
+                    continue;
+                Windex[put] = i;
+                Wvalue[put++] = Bx[pos];
+                iwork0[i]++;
+            }
+            Wend[j] = put;
+            put += stretch*cnz + pad;
+            lu_list_remove(Wflink, Wblink, j); /* reappend line to list end */
+            lu_list_add(j, 0, Wflink, Wblink, 2*m);
+        }
     }
-    assert(nz == bump_nz);
 
     /*
      * Build rowwise storage (pattern only).
@@ -177,5 +194,6 @@ lu_int lu_setup_bump(
 
     this->bump_nz = bump_nz;
     this->bump_size = m-rank;
+    this->rankdef = rankdef;
     return BASICLU_OK;
 }

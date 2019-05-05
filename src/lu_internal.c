@@ -15,6 +15,7 @@
 #define BASICLU_FTCOLUMN_OUT 258
 #define BASICLU_PIVOT_ROW 259
 #define BASICLU_PIVOT_COL 260
+#define BASICLU_RANKDEF 261
 #define BASICLU_MARKER 266
 #define BASICLU_UPDATE_COST_NUMER 267
 #define BASICLU_UPDATE_COST_DENOM 268
@@ -57,7 +58,6 @@ lu_int lu_load(
     this->stretch               = xstore[BASICLU_STRETCH];
     this->compress_thres        = xstore[BASICLU_COMPRESSION_THRESHOLD];
     this->sparse_thres          = xstore[BASICLU_SPARSE_THRESHOLD];
-    this->remove_cols           = xstore[BASICLU_REMOVE_COLUMNS] != 0;
     this->search_rows           = xstore[BASICLU_SEARCH_ROWS] != 0;
 
     /* user readable */
@@ -121,6 +121,7 @@ lu_int lu_load(
     this->btran_for_update      = xstore[BASICLU_FTCOLUMN_OUT];
     this->marker                = xstore[BASICLU_MARKER];
     this->pivotlen              = xstore[BASICLU_PIVOTLEN];
+    this->rankdef               = xstore[BASICLU_RANKDEF];
 
     /* aliases to user arrays */
     this->Lindex = Li; this->Lvalue = Lx;
@@ -261,6 +262,7 @@ lu_int lu_save(
     xstore[BASICLU_FTCOLUMN_OUT]            = this->btran_for_update;
     xstore[BASICLU_MARKER]                  = this->marker;
     xstore[BASICLU_PIVOTLEN]                = this->pivotlen;
+    xstore[BASICLU_RANKDEF]                 = this->rankdef;
 
     return status;
 }
@@ -323,6 +325,7 @@ void lu_reset(struct lu *this)
     this->btran_for_update = -1;
     this->marker = 0;
     this->pivotlen = 0;
+    this->rankdef = 0;
 
     /*
      * One past the final position in @Wend must hold the file size.

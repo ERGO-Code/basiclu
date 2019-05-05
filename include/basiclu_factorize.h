@@ -126,9 +126,11 @@ Parameters:
 
     xstore[BASICLU_REMOVE_COLUMNS]
 
-        If this value is nonzero, then a column is removed from the active
-        submatrix if its maximum active entry is zero or less than or equal to
-        xstore[BASICLU_ABS_PIVOT_TOLERANCE]. Default: 0
+        This parameter is present for compatibility to previous versions but has
+        no effect. If during factorization the maximum entry of a column of the
+        active submatrix becomes zero or less than
+        xstore[BASICLU_ABS_PIVOT_TOLERANCE], then that column is immediately
+        removed without choosing a pivot.
 
 Info:
 

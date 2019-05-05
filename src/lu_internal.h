@@ -32,7 +32,6 @@ struct lu
     double stretch;
     double compress_thres;
     double sparse_thres;
-    lu_int remove_cols;
     lu_int search_rows;
 
     /* user readable */
@@ -96,6 +95,8 @@ struct lu
     lu_int btran_for_update;    /* >= 0 if BTRAN prepared for update */
     lu_int marker;              /* see @marked, below */
     lu_int pivotlen;            /* length of @pivotcol, @pivotrow; <= 2*m */
+    lu_int rankdef;             /* # columns removed from active submatrix
+                                   because maximum was 0 or < abstol */
 
     /* aliases to user arrays */
     lu_int *Lindex, *Uindex, *Windex;
