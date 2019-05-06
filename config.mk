@@ -6,7 +6,7 @@
 # in SuiteSparse version 4.5.3 and available from http://www.suitesparse.com.
 # As with the original file, no licensing restrictions apply to this file.
 
-BASICLU_VERSION = 2.0.0
+BASICLU_VERSION = 2.1.0
 
 #===============================================================================
 # Defaults for any system
@@ -85,7 +85,7 @@ BASICLU_VERSION = 2.0.0
 #===============================================================================
 
 LIBRARY = libbasiclu
-VERSION = 2.0.0
+VERSION = 2.1.0
 SO_VERSION = 2
 
 ifeq ($(UNAME),Windows)
