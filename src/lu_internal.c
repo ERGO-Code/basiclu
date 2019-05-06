@@ -16,6 +16,8 @@
 #define BASICLU_PIVOT_ROW 259
 #define BASICLU_PIVOT_COL 260
 #define BASICLU_RANKDEF 261
+#define BASICLU_MIN_COLNZ 262
+#define BASICLU_MIN_ROWNZ 263
 #define BASICLU_MARKER 266
 #define BASICLU_UPDATE_COST_NUMER 267
 #define BASICLU_UPDATE_COST_DENOM 268
@@ -122,6 +124,8 @@ lu_int lu_load(
     this->marker                = xstore[BASICLU_MARKER];
     this->pivotlen              = xstore[BASICLU_PIVOTLEN];
     this->rankdef               = xstore[BASICLU_RANKDEF];
+    this->min_colnz             = xstore[BASICLU_MIN_COLNZ];
+    this->min_rownz             = xstore[BASICLU_MIN_ROWNZ];
 
     /* aliases to user arrays */
     this->Lindex = Li; this->Lvalue = Lx;
@@ -263,6 +267,8 @@ lu_int lu_save(
     xstore[BASICLU_MARKER]                  = this->marker;
     xstore[BASICLU_PIVOTLEN]                = this->pivotlen;
     xstore[BASICLU_RANKDEF]                 = this->rankdef;
+    xstore[BASICLU_MIN_COLNZ]               = this->min_colnz;
+    xstore[BASICLU_MIN_ROWNZ]               = this->min_rownz;
 
     return status;
 }
@@ -326,6 +332,8 @@ void lu_reset(struct lu *this)
     this->marker = 0;
     this->pivotlen = 0;
     this->rankdef = 0;
+    this->min_colnz = 1;
+    this->min_rownz = 1;
 
     /*
      * One past the final position in @Wend must hold the file size.

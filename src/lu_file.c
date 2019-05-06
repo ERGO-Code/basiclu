@@ -96,8 +96,7 @@ void lu_file_reappend(
     assert(room >= extra_space);
     used += extra_space;
     begin[nlines] = used;       /* beginning of unused space */
-    lu_list_remove(next, prev, line);
-    lu_list_add(line, 0, next, prev, nlines);
+    lu_list_move(line, 0, next, prev, nlines, NULL);
 }
 
 

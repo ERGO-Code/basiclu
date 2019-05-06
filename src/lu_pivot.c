@@ -186,7 +186,7 @@ static lu_int lu_pivot_any(struct lu *this)
     const lu_int rnz1 = rend-rbeg-1;   /* nz in pivot row except pivot */
 
     lu_int i, j, pos, pos1, rpos, put, Uput, where, nz, *wi;
-    lu_int grow, room, nupdate, found, position;
+    lu_int grow, room, found, position;
     double pivot, a, x, cmx, xrj, *wx;
 
     /*
@@ -291,7 +291,6 @@ static lu_int lu_pivot_any(struct lu *this)
             }
         }
         assert(where >= 0);
-        nupdate = Wend[j] - put;
         Wend[j] = put;
         lu_iswap(Windex, pos1, where);
         lu_fswap(Wvalue, pos1, where);
@@ -334,13 +333,11 @@ static lu_int lu_pivot_any(struct lu *this)
         assert(Windex[Wbegin[j]] == pivot_row);
         Wbegin[j]++;
 
-        /* If nz changed move column to new list. */
-        if (cnz1-nupdate-1)
-        {
-            nz = Wend[j] - Wbegin[j];
-            lu_list_remove(colcount_flink, colcount_blink, j);
-            lu_list_add(j, nz, colcount_flink, colcount_blink, m);
-        }
+        /* Move column to new list and update min_colnz. */
+        nz = Wend[j] - Wbegin[j];
+        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
+                     &this->min_colnz);
+
         colmax[j] = cmx;
     }
     for (pos = cbeg+1; pos < cend; pos++)
@@ -392,8 +389,8 @@ static lu_int lu_pivot_any(struct lu *this)
         /* Move to new list. The row must be reinserted even if nz are
            unchanged since it might have been taken out in Markowitz search. */
         nz = Wend[m+i] - Wbegin[m+i];
-        lu_list_remove(rowcount_flink, rowcount_blink, i);
-        lu_list_add(i, nz, rowcount_flink, rowcount_blink, m);
+        lu_list_move(i, nz, rowcount_flink, rowcount_blink, m,
+                     &this->min_rownz);
     }
     for (rpos = rbeg; rpos < rend; rpos++)
         marked[Windex[rpos]] = 0;
@@ -643,10 +640,10 @@ static lu_int lu_pivot_small(struct lu *this)
         assert(Windex[Wbegin[j]] == pivot_row);
         Wbegin[j]++;
 
-        /* Move column to new list. */
+        /* Move column to new list and update min_colnz. */
         nz = Wend[j] - Wbegin[j];
-        lu_list_remove(colcount_flink, colcount_blink, j);
-        lu_list_add(j, nz, colcount_flink, colcount_blink, m);
+        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
+                     &this->min_colnz);
 
         colmax[j] = cmx;
     }
@@ -708,8 +705,8 @@ static lu_int lu_pivot_small(struct lu *this)
         /* Move to new list. The row must be reinserted even if nz are
            unchanged since it might have been taken out in Markowitz search. */
         nz = Wend[m+i] - Wbegin[m+i];
-        lu_list_remove(rowcount_flink, rowcount_blink, i);
-        lu_list_add(i, nz, rowcount_flink, rowcount_blink, m);
+        lu_list_move(i, nz, rowcount_flink, rowcount_blink, m,
+                     &this->min_rownz);
     }
     for (rpos = rbeg; rpos < rend; rpos++)
         marked[Windex[rpos]] = 0;
@@ -822,8 +819,8 @@ static lu_int lu_pivot_singleton_row(struct lu *this)
             assert(where < Wend[m+i]-1);
         Windex[where] = Windex[--Wend[m+i]];
         nz = Wend[m+i] - Wbegin[m+i];
-        lu_list_remove(rowcount_flink, rowcount_blink, i);
-        lu_list_add(i, nz, rowcount_flink, rowcount_blink, m);
+        lu_list_move(i, nz, rowcount_flink, rowcount_blink, m,
+                     &this->min_rownz);
     }
 
     /*
@@ -914,8 +911,8 @@ static lu_int lu_pivot_singleton_col(struct lu *this)
         Windex[where] = Windex[--Wend [j]];
         Wvalue[where] = Wvalue[Wend [j]];
         nz = Wend[j] - Wbegin[j];
-        lu_list_remove(colcount_flink, colcount_blink, j);
-        lu_list_add(j, nz, colcount_flink, colcount_blink, m);
+        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
+                     &this->min_colnz);
         colmax[j] = cmx;
     }
     assert(found);
@@ -1086,8 +1083,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
                 /* Decrease column count. */
                 nz = end - Wbegin[j];
-                lu_list_remove(colcount_flink, colcount_blink, j);
-                lu_list_add(j, nz, colcount_flink, colcount_blink, m);
+                lu_list_move(j, nz, colcount_flink, colcount_blink, m,
+                             &this->min_colnz);
             }
         }
         else
@@ -1116,8 +1113,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
             /* Decrease column count. */
             nz = Wend[j] - Wbegin[j];
-            lu_list_remove(colcount_flink, colcount_blink, j);
-            lu_list_add(j, nz, colcount_flink, colcount_blink, m);
+            lu_list_move(j, nz, colcount_flink, colcount_blink, m,
+                         &this->min_colnz);
         }
         colmax[j] = cmx;
     }
@@ -1176,8 +1173,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
     /* Reinsert other row into row counts. */
     nz = Wend[m+other_row] - Wbegin[m+other_row];
-    lu_list_remove(rowcount_flink, rowcount_blink, other_row);
-    lu_list_add(other_row, nz, rowcount_flink, rowcount_blink, m);
+    lu_list_move(other_row, nz, rowcount_flink, rowcount_blink, m,
+                 &this->min_rownz);
 
     /* Store column in L. */
     put = Lbegin_p[rank];
@@ -1243,15 +1240,14 @@ static void lu_remove_col(struct lu *this, lu_int j)
             assert(where < Wend[m+i]-1);
         Windex[where] = Windex[--Wend[m+i]];
         nz = Wend[m+i] - Wbegin[m+i];
-        lu_list_remove(rowcount_flink, rowcount_blink, i);
-        lu_list_add(i, nz, rowcount_flink, rowcount_blink, m);
+        lu_list_move(i, nz, rowcount_flink, rowcount_blink, m,
+                     &this->min_rownz);
     }
 
     /* Remove column j from column file. */
     colmax[j] = 0.0;
     Wend[j] = cbeg;
-    lu_list_remove(colcount_flink, colcount_blink, j);
-    lu_list_add(j, 0, colcount_flink, colcount_blink, m);
+    lu_list_move(j, 0, colcount_flink, colcount_blink, m, &this->min_colnz);
 
     this->rankdef++;
 }

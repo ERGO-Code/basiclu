@@ -97,6 +97,8 @@ struct lu
     lu_int pivotlen;            /* length of @pivotcol, @pivotrow; <= 2*m */
     lu_int rankdef;             /* # columns removed from active submatrix
                                    because maximum was 0 or < abstol */
+    lu_int min_colnz;           /* colcount lists 1..min_colnz-1 are empty */
+    lu_int min_rownz;           /* rowcount lists 1..min_rownz-1 are empty */
 
     /* aliases to user arrays */
     lu_int *Lindex, *Uindex, *Windex;

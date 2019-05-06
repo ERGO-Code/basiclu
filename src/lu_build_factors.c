@@ -324,8 +324,7 @@ lu_int lu_build_factors(struct lu *this)
             }
             Wend[jpivot] = put;
             put += stretch*nz + pad;
-            lu_list_remove(Wflink, Wblink, jpivot);
-            lu_list_add(jpivot, 0, Wflink, Wblink, m);
+            lu_list_move(jpivot, 0, Wflink, Wblink, m, NULL);
         }
     }
     else
@@ -349,8 +348,7 @@ lu_int lu_build_factors(struct lu *this)
             }
             Wend[jpivot] = put;
             put += stretch*nz + pad;
-            lu_list_remove(Wflink, Wblink, jpivot);
-            lu_list_add(jpivot, 0, Wflink, Wblink, m);
+            lu_list_move(jpivot, 0, Wflink, Wblink, m, NULL);
             Unz += nz;
         }
         for (k = rank; k < m; k++)
@@ -359,8 +357,7 @@ lu_int lu_build_factors(struct lu *this)
             Wbegin[jpivot] = put;
             Wend[jpivot] = put;
             put += pad;
-            lu_list_remove(Wflink, Wblink, jpivot);
-            lu_list_add(jpivot, 0, Wflink, Wblink, m);
+            lu_list_move(jpivot, 0, Wflink, Wblink, m, NULL);
         }
     }
     assert(put <= Wend[m]);

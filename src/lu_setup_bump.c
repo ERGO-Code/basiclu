@@ -81,7 +81,7 @@ lu_int lu_setup_bump(
     lu_int *iwork0          = this->iwork0;
 
     lu_int bump_nz = Bnz-Lnz-Unz-rank; /* will change if columns are dropped */
-    lu_int i, j, pos, put, cnz, rnz, need, rankdef;
+    lu_int i, j, pos, put, cnz, rnz, need, rankdef, min_rownz, min_colnz;
     double cmx;
 
     assert(Lnz >= 0);
@@ -109,7 +109,7 @@ lu_int lu_setup_bump(
     /*
      * Build columnwise storage. Build row counts in iwork0.
      */
-    lu_list_init(colcount_flink, colcount_blink, m, m+2);
+    lu_list_init(colcount_flink, colcount_blink, m, m+2, &min_colnz);
     rankdef = 0;
     put = 0;
     for (j = 0; j < m; j++)
@@ -130,7 +130,7 @@ lu_int lu_setup_bump(
         {
             /* Leave column of active submatrix empty. */
             colmax[j] = 0.0;
-            lu_list_add(j, 0, colcount_flink, colcount_blink, m);
+            lu_list_add(j, 0, colcount_flink, colcount_blink, m, &min_colnz);
             bump_nz -= cnz;
             rankdef++;
         }
@@ -138,7 +138,7 @@ lu_int lu_setup_bump(
         {
             /* Copy column into active submatrix. */
             colmax[j] = cmx;
-            lu_list_add(j, cnz, colcount_flink, colcount_blink, m);
+            lu_list_add(j, cnz, colcount_flink, colcount_blink, m, &min_colnz);
             Wbegin[j] = put;
             for (pos = Bbegin[j]; pos < Bend[j]; pos++)
             {
@@ -151,26 +151,26 @@ lu_int lu_setup_bump(
             }
             Wend[j] = put;
             put += stretch*cnz + pad;
-            lu_list_remove(Wflink, Wblink, j); /* reappend line to list end */
-            lu_list_add(j, 0, Wflink, Wblink, 2*m);
+            /* reappend line to list end */
+            lu_list_move(j, 0, Wflink, Wblink, 2*m, NULL);
         }
     }
 
     /*
      * Build rowwise storage (pattern only).
      */
-    lu_list_init(rowcount_flink, rowcount_blink, m, m+2);
+    lu_list_init(rowcount_flink, rowcount_blink, m, m+2, &min_rownz);
     for (i = 0; i < m; i++)     /* set row pointers */
     {
         if (pinv[i] >= 0)
             continue;
         rnz = iwork0[i];
         iwork0[i] = 0;
-        lu_list_add(i, rnz, rowcount_flink, rowcount_blink, m);
+        lu_list_add(i, rnz, rowcount_flink, rowcount_blink, m, &min_rownz);
         Wbegin2[i] = Wend2[i] = put;
         put += rnz;
-        lu_list_remove(Wflink, Wblink, m+i); /* reappend line to list end */
-        lu_list_add(m+i, 0, Wflink, Wblink, 2*m);
+        /* reappend line to list end */
+        lu_list_move(m+i, 0, Wflink, Wblink, 2*m, NULL);
         put += stretch*rnz + pad;
     }
     for (j = 0; j < m; j++)     /* fill rows */
@@ -195,5 +195,7 @@ lu_int lu_setup_bump(
     this->bump_nz = bump_nz;
     this->bump_size = m-rank;
     this->rankdef = rankdef;
+    this->min_colnz = min_colnz;
+    this->min_rownz = min_rownz;
     return BASICLU_OK;
 }

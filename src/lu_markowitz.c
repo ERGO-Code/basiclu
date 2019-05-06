@@ -45,9 +45,11 @@ lu_int lu_markowitz(struct lu *this)
     const double reltol             = this->reltol;
     const lu_int maxsearch          = this->maxsearch;
     const lu_int search_rows        = this->search_rows;
+    const lu_int nz_start           = search_rows ?
+        MIN(this->min_colnz, this->min_rownz) : this->min_colnz;
 
     lu_int i, j, pos, where, inext, nz, pivot_row, pivot_col;
-    lu_int nsearch, cheap, found;
+    lu_int nsearch, cheap, found, min_colnz, min_rownz;
     double cmx, x, tol, tic[2];
 
     /* integers for Markowitz cost must be 64 bit to prevent overflow */
@@ -59,12 +61,17 @@ lu_int lu_markowitz(struct lu *this)
     pivot_col = -1;             /* col of best pivot so far */
     MC = M*M;                   /* Markowitz cost of best pivot so far */
     nsearch = 0;                /* count rows/columns searched */
+    min_colnz = -1;             /* minimum col count in active submatrix */
+    min_rownz = -1;             /* minimum row count in active submatrix */
 
-    for (nz = 1; nz <= m; nz++)
+    assert(nz_start >= 1);
+    for (nz = nz_start; nz <= m; nz++)
     {
         /* Search columns with nz nonzeros. */
         for (j = colcount_flink[m+nz]; j < m; j = colcount_flink[j])
         {
+            if (min_colnz == -1)
+                min_colnz = nz;
             assert(Wend[j] - Wbegin[j] == nz);
             cmx = colmax[j];
             assert(cmx >= 0);
@@ -104,6 +111,8 @@ lu_int lu_markowitz(struct lu *this)
         /* Search rows with nz nonzeros. */
         for (i = rowcount_flink[m+nz]; i < m; i = inext)
         {
+            if (min_rownz == -1)
+                min_rownz = nz;
             /* rowcount_flink[i] might be changed below, so keep a copy */
             inext = rowcount_flink[i];
             assert(Wend[m+i] - Wbegin[m+i] == nz);
@@ -142,8 +151,7 @@ lu_int lu_markowitz(struct lu *this)
              * acceptable, then don't search the row again until updated. */
             if (cheap && !found)
             {
-                lu_list_remove(rowcount_flink, rowcount_blink, i);
-                lu_list_add(i, m+1, rowcount_flink, rowcount_blink, m);
+                lu_list_move(i, m+1, rowcount_flink, rowcount_blink, m, NULL);
             }
             else
             {
@@ -159,6 +167,10 @@ done:
     this->pivot_row = pivot_row;
     this->pivot_col = pivot_col;
     this->nsearch_pivot += nsearch;
+    if (min_colnz >= 0)
+        this->min_colnz = min_colnz;
+    if (min_rownz >= 0)
+        this->min_rownz = min_rownz;
     this->time_search_pivot += lu_toc(tic);
     return BASICLU_OK;
 }
