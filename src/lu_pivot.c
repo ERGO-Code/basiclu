@@ -1,7 +1,7 @@
 /* 
  * lu_pivot.c
  *
- * Copyright (C) 2016-2018  ERGO-Code
+ * Copyright (C) 2016-2019  ERGO-Code
  *
  * Pivot elimination from active submatrix
  *
@@ -126,8 +126,8 @@ lu_int lu_pivot(struct lu *this)
         status = lu_pivot_any(this);
     }
 
-    /* Remove columns from active submatrix whose maximum entry has dropped
-       below absolute pivot tolerance. */
+    /* Remove all entries in columns whose maximum entry has dropped below
+       absolute pivot tolerance. */
     if (status == BASICLU_OK)
     {
         for (pos = Ubegin[rank]; pos < Ubegin[rank+1]; pos++)
@@ -1248,6 +1248,4 @@ static void lu_remove_col(struct lu *this, lu_int j)
     colmax[j] = 0.0;
     Wend[j] = cbeg;
     lu_list_move(j, 0, colcount_flink, colcount_blink, m, &this->min_colnz);
-
-    this->rankdef++;
 }

@@ -1,7 +1,7 @@
 /*
  * lu_markowitz.c
  *
- * Copyright (C) 2016-2018  ERGO-Code
+ * Copyright (C) 2016-2019  ERGO-Code
  *
  * Search for pivot element with small Markowitz cost. An eligible pivot
  * must be nonzero and satisfy
@@ -15,9 +15,14 @@
  *
  * The search is terminated when maxsearch rows or columns with eligible pivots
  * have been searched (if not before). The row and column of the cheapest one
- * found is stored in pivot_row and pivot_col. When no pivot was found then
- * pivot_row = pivot_col = -1 (active submatrix has no element that is nonzero
- * and >= abstol).
+ * found is stored in pivot_row and pivot_col.
+ *
+ * When the active submatrix contains columns with column count = 0, then such a
+ * column is chosen immediately and pivot_row = -1 is returned. Otherwise, when
+ * the Markowitz search does not find a pivot that is nonzero and >= abstol,
+ * then pivot_col = pivot_row = -1 is returned. (The latter cannot happen in the
+ * current version of the code because lu_pivot() erases columns of the active
+ * submatrix whose maximum absolute value drops below abstol.)
  *
  * The Markowitz search is implemented as described in [1].
  *
@@ -63,8 +68,18 @@ lu_int lu_markowitz(struct lu *this)
     nsearch = 0;                /* count rows/columns searched */
     min_colnz = -1;             /* minimum col count in active submatrix */
     min_rownz = -1;             /* minimum row count in active submatrix */
-
     assert(nz_start >= 1);
+
+    /* If the active submatrix contains empty columns, choose one and return
+       with pivot_row = -1. */
+    if (colcount_flink[m] != m)
+    {
+        pivot_col = colcount_flink[m];
+        assert(pivot_col >= 0 && pivot_col < m);
+        assert(Wend[pivot_col] == Wbegin[pivot_col]);
+        goto done;
+    }
+
     for (nz = nz_start; nz <= m; nz++)
     {
         /* Search columns with nz nonzeros. */

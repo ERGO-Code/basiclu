@@ -1,7 +1,7 @@
 /*
  * lu_setup_bump.c
  *
- * Copyright (C) 2016-2018  ERGO-Code
+ * Copyright (C) 2016-2019  ERGO-Code
  *
  * Setup data structures for bump factorization
  *
@@ -81,7 +81,7 @@ lu_int lu_setup_bump(
     lu_int *iwork0          = this->iwork0;
 
     lu_int bump_nz = Bnz-Lnz-Unz-rank; /* will change if columns are dropped */
-    lu_int i, j, pos, put, cnz, rnz, need, rankdef, min_rownz, min_colnz;
+    lu_int i, j, pos, put, cnz, rnz, need, min_rownz, min_colnz;
     double cmx;
 
     assert(Lnz >= 0);
@@ -110,7 +110,6 @@ lu_int lu_setup_bump(
      * Build columnwise storage. Build row counts in iwork0.
      */
     lu_list_init(colcount_flink, colcount_blink, m, m+2, &min_colnz);
-    rankdef = 0;
     put = 0;
     for (j = 0; j < m; j++)
     {
@@ -132,7 +131,6 @@ lu_int lu_setup_bump(
             colmax[j] = 0.0;
             lu_list_add(j, 0, colcount_flink, colcount_blink, m, &min_colnz);
             bump_nz -= cnz;
-            rankdef++;
         }
         else
         {
@@ -194,7 +192,6 @@ lu_int lu_setup_bump(
 
     this->bump_nz = bump_nz;
     this->bump_size = m-rank;
-    this->rankdef = rankdef;
     this->min_colnz = min_colnz;
     this->min_rownz = min_rownz;
     return BASICLU_OK;
