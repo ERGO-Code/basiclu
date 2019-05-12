@@ -37,6 +37,7 @@
  *  lu_list_add
  *  lu_list_remove
  *  lu_list_move
+ *  lu_list_move_if
  *  lu_list_swap
  *
  * The methods are defined in this header file as static inline. This header
@@ -114,6 +115,25 @@ static inline void lu_list_move(
 {
     lu_list_remove(flink, blink, elem);
     lu_list_add(elem, list, flink, blink, nelem, min_list);
+}
+
+
+/* ==========================================================================
+ * lu_list_move_if
+ *
+ * Remove element @elem from its list and add it to list @list. Do nothing if
+ * @elem is not in any list.
+ * ========================================================================== */
+
+static inline void lu_list_move_if(
+    lu_int elem, lu_int list, lu_int *flink, lu_int *blink, lu_int nelem,
+    lu_int *min_list)
+{
+    if (flink[elem] != elem)
+    {
+        lu_list_remove(flink, blink, elem);
+        lu_list_add(elem, list, flink, blink, nelem, min_list);
+    }
 }
 
 

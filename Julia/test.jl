@@ -19,14 +19,18 @@ end
 # test_factorize
 # =============================================================================
 """
-    test_factorize(testdir, trans=false)
+    test_factorize(testdir, trans=false, nbuckets=0)
 
 For all *.mat files in @testdir read matrix B and factorize it. Monitor residual
 of factorization and forward/backward solves.
 
 @trans specifies if B or its transposed are factorized.
+@nbuckets specifies the number of column buckets.
+ nbuckets <= 0: no buckets used
+ nbuckets >= m: each column in its own bucket
+ 1 <= nbuckets <= m-1: column j in bucket mod(j-1, nbuckets)
 """
-function test_factorize(testdir::String, trans=false)
+function test_factorize(testdir::String, trans=false, nbuckets=0)
     files = readdir(testdir)
     for f in files
         if length(f) < 4 || f[end-3:end] != ".mat"
@@ -39,8 +43,16 @@ function test_factorize(testdir::String, trans=false)
             (B,Bt) = (Bt,B)
         end
         m = size(B,1)
+        buckets = C_NULL
+        if nbuckets > 0
+            buckets = Array{cint}(m)
+            nbuckets = convert(cint, min(nbuckets, m))
+            for j = 1:m
+                buckets[j] = mod(j-1, nbuckets)
+            end
+        end
         blu = initialize(m)
-        err = factorize(blu, B)
+        err = factorize(blu, B, buckets)
         if err != BASICLU_OK
             @printf(" failed (%d)\n", err)
             continue

@@ -74,6 +74,7 @@ struct lu
     double residual_test;       /* computed by lu_residual_test() */
 
     lu_int matrix_nz;           /* nz in basis matrix when factorized */
+    lu_int nbuckets;            /* # column buckets; 0 if no buckets given */
     lu_int rank;                /* rank of basis matrix when factorized */
     lu_int bump_size;
     lu_int bump_nz;
@@ -99,6 +100,8 @@ struct lu
                                    because maximum was 0 or < abstol */
     lu_int min_colnz;           /* colcount lists 1..min_colnz-1 are empty */
     lu_int min_rownz;           /* rowcount lists 1..min_rownz-1 are empty */
+    lu_int bucket_ptr;          /* 1 <= bucket_ptr <= m is the beginning of the
+                                   next bucket in Lbegin_p; 0 if no buckets */
 
     /* aliases to user arrays */
     lu_int *Lindex, *Uindex, *Windex;
@@ -170,7 +173,7 @@ lu_int lu_setup_bump(
 
 lu_int lu_singletons(
     struct lu *this, const lu_int *Bbegin, const lu_int *Bend, const lu_int *Bi,
-    const double *Bx);
+    const double *Bx, const lu_int *buckets);
 
 void lu_solve_dense(
     struct lu *this, const double *rhs, double *lhs, char trans);

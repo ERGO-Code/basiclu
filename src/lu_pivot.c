@@ -333,10 +333,11 @@ static lu_int lu_pivot_any(struct lu *this)
         assert(Windex[Wbegin[j]] == pivot_row);
         Wbegin[j]++;
 
-        /* Move column to new list and update min_colnz. */
+        /* Move column to new list and update min_colnz. If the column was not
+           in any list, then it belongs to another bucket and is kept out. */
         nz = Wend[j] - Wbegin[j];
-        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
-                     &this->min_colnz);
+        lu_list_move_if(j, nz, colcount_flink, colcount_blink, m,
+                        &this->min_colnz);
 
         colmax[j] = cmx;
     }
@@ -640,10 +641,11 @@ static lu_int lu_pivot_small(struct lu *this)
         assert(Windex[Wbegin[j]] == pivot_row);
         Wbegin[j]++;
 
-        /* Move column to new list and update min_colnz. */
+        /* Move column to new list and update min_colnz. If the column was not
+           in any list, then it belongs to another bucket and is kept out. */
         nz = Wend[j] - Wbegin[j];
-        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
-                     &this->min_colnz);
+        lu_list_move_if(j, nz, colcount_flink, colcount_blink, m,
+                        &this->min_colnz);
 
         colmax[j] = cmx;
     }
@@ -911,8 +913,8 @@ static lu_int lu_pivot_singleton_col(struct lu *this)
         Windex[where] = Windex[--Wend [j]];
         Wvalue[where] = Wvalue[Wend [j]];
         nz = Wend[j] - Wbegin[j];
-        lu_list_move(j, nz, colcount_flink, colcount_blink, m,
-                     &this->min_colnz);
+        lu_list_move_if(j, nz, colcount_flink, colcount_blink, m,
+                        &this->min_colnz);
         colmax[j] = cmx;
     }
     assert(found);
@@ -1083,8 +1085,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
                 /* Decrease column count. */
                 nz = end - Wbegin[j];
-                lu_list_move(j, nz, colcount_flink, colcount_blink, m,
-                             &this->min_colnz);
+                lu_list_move_if(j, nz, colcount_flink, colcount_blink, m,
+                                &this->min_colnz);
             }
         }
         else
@@ -1113,8 +1115,8 @@ static lu_int lu_pivot_doubleton_col(struct lu *this)
 
             /* Decrease column count. */
             nz = Wend[j] - Wbegin[j];
-            lu_list_move(j, nz, colcount_flink, colcount_blink, m,
-                         &this->min_colnz);
+            lu_list_move_if(j, nz, colcount_flink, colcount_blink, m,
+                            &this->min_colnz);
         }
         colmax[j] = cmx;
     }
@@ -1247,5 +1249,5 @@ static void lu_remove_col(struct lu *this, lu_int j)
     /* Remove column j from column file. */
     colmax[j] = 0.0;
     Wend[j] = cbeg;
-    lu_list_move(j, 0, colcount_flink, colcount_blink, m, &this->min_colnz);
+    lu_list_move_if(j, 0, colcount_flink, colcount_blink, m, &this->min_colnz);
 }

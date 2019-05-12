@@ -111,6 +111,7 @@ typedef int64_t lu_int;
 #define BASICLU_RESIDUAL_TEST 111
 
 #define BASICLU_MATRIX_NZ 100
+#define BASICLU_NBUCKETS 112
 #define BASICLU_RANK 101
 #define BASICLU_BUMP_SIZE 102
 #define BASICLU_BUMP_NZ 103
@@ -130,6 +131,7 @@ typedef int64_t lu_int;
 
 #include "basiclu_initialize.h"
 #include "basiclu_factorize.h"
+#include "basiclu_factorize_buckets.h"
 #include "basiclu_get_factors.h"
 #include "basiclu_solve_dense.h"
 #include "basiclu_solve_sparse.h"
@@ -139,6 +141,7 @@ typedef int64_t lu_int;
 #include "basiclu_object.h"
 #include "basiclu_obj_initialize.h"
 #include "basiclu_obj_factorize.h"
+#include "basiclu_obj_factorize_buckets.h"
 #include "basiclu_obj_get_factors.h"
 #include "basiclu_obj_solve_dense.h"
 #include "basiclu_obj_solve_sparse.h"

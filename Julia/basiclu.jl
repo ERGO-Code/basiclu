@@ -94,6 +94,7 @@ const BASICLU_MATRIX_INFNORM = 100
 const BASICLU_RESIDUAL_TEST = 112
 
 const BASICLU_MATRIX_NZ = 101
+const BASICLU_NBUCKETS = 113
 const BASICLU_RANK = 102
 const BASICLU_BUMP_SIZE = 103
 const BASICLU_BUMP_NZ = 104
@@ -223,31 +224,36 @@ end
 # factorize
 # =============================================================================
 """
-    factorize(this, B)
+    factorize(this, B, buckets=C_NULL)
 
 Load sparse matrix into BASICLU object and factorize it. @B must be square
-and have the same dimension for which @this was initialized.
+and have the same dimension for which @this was initialized. If @buckets is
+not C_NULL, then it must be of type Array{cint,1} and of length size(B,2).
 
 Return status code.
 """
-function factorize(this::BLU, B::spmatrix)
+function factorize(this::BLU, B::spmatrix, buckets=C_NULL)
     m = convert(cint, this.xstore[BASICLU_DIM])
     nrow, ncol = size(B)
     @assert nrow == ncol
     @assert nrow == m
+    if buckets != C_NULL
+        @assert typeof(buckets) == Array{cint,1}
+        @assert length(buckets) == m
+    end
     Bp = B.colptr-1
     Bi = B.rowval-1
     Bx = B.nzval                # don't need a copy
     c0ntinue = 0
     err = BASICLU_OK
     while true
-        err = ccall((:basiclu_factorize, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_factorize_buckets, "libbasiclu.so"), cint,
                     (cint_ptr, cdbl_ptr,
                      cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
-                     cint_ptr, cint_ptr, cint_ptr, cdbl_ptr, cint),
+                     cint_ptr, cint_ptr, cint_ptr, cdbl_ptr, cint_ptr, cint),
                     this.istore, this.xstore,
                     this.Li, this.Lx, this.Ui, this.Ux, this.Wi, this.Wx,
-                    Bp, pointer(Bp, 2), Bi, Bx, c0ntinue)
+                    Bp, pointer(Bp, 2), Bi, Bx, buckets, c0ntinue)
         if err != BASICLU_REALLOCATE break; end
         realloc(this)
         c0ntinue = 1

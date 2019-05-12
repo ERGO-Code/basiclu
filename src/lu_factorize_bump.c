@@ -10,6 +10,8 @@
 #include "lu_internal.h"
 #include "lu_list.h"
 
+static void lu_next_bucket(struct lu *this);
+
 lu_int lu_factorize_bump(struct lu *this)
 {
     const lu_int m          = this->m;
@@ -21,6 +23,9 @@ lu_int lu_factorize_bump(struct lu *this)
 
     while (this->rank + this->rankdef < m)
     {
+        if (this->bucket_ptr == this->rank+this->rankdef+1)
+            lu_next_bucket(this);
+
         /*
          * Find pivot element. Markowitz search need not be called if the
          * previous call to lu_pivot() returned for reallocation. In this case
@@ -53,4 +58,29 @@ lu_int lu_factorize_bump(struct lu *this)
         }
     }
     return status;
+}
+
+static void lu_next_bucket(struct lu *this)
+{
+    const lu_int m          = this->m;
+    lu_int *colcount_flink  = this->colcount_flink;
+    lu_int *colcount_blink  = this->colcount_blink;
+    const lu_int *Wbegin    = this->Wbegin;
+    const lu_int *Wend      = this->Wend;
+    const lu_int *Lbegin_p  = this->Lbegin_p;
+    lu_int bucket_ptr       = this->bucket_ptr;
+    lu_int j, nz;
+
+    assert(bucket_ptr >= 1 && bucket_ptr <= m);
+    assert(Lbegin_p[bucket_ptr] < 0);
+
+    do {
+        j = Lbegin_p[bucket_ptr++];
+        if (j < 0) j = -j-1;    /* must unflip first index */
+        assert(this->qinv[j] < 0);
+        nz = Wend[j] - Wbegin[j];
+        lu_list_add(j, nz, colcount_flink, colcount_blink, m, &this->min_colnz);
+    } while (bucket_ptr <= m && Lbegin_p[bucket_ptr] >= 0);
+
+    this->bucket_ptr = bucket_ptr;
 }

@@ -49,7 +49,7 @@ lu_int lu_markowitz(struct lu *this)
     const double abstol             = this->abstol;
     const double reltol             = this->reltol;
     const lu_int maxsearch          = this->maxsearch;
-    const lu_int search_rows        = this->search_rows;
+    const lu_int search_rows        = this->search_rows && this->bucket_ptr==0;
     const lu_int nz_start           = search_rows ?
         MIN(this->min_colnz, this->min_rownz) : this->min_colnz;
 

@@ -63,6 +63,7 @@ lu_int lu_setup_bump(
     const double abstol     = this->abstol;
     const lu_int pad        = this->pad;
     const double stretch    = this->stretch;
+    const lu_int have_buckets = this->bucket_ptr != 0;
     lu_int *colcount_flink  = this->colcount_flink;
     lu_int *colcount_blink  = this->colcount_blink;
     lu_int *rowcount_flink  = this->rowcount_flink;
@@ -129,14 +130,13 @@ lu_int lu_setup_bump(
         {
             /* Leave column of active submatrix empty. */
             colmax[j] = 0.0;
-            lu_list_add(j, 0, colcount_flink, colcount_blink, m, &min_colnz);
             bump_nz -= cnz;
+            cnz = 0;
         }
         else
         {
             /* Copy column into active submatrix. */
             colmax[j] = cmx;
-            lu_list_add(j, cnz, colcount_flink, colcount_blink, m, &min_colnz);
             Wbegin[j] = put;
             for (pos = Bbegin[j]; pos < Bend[j]; pos++)
             {
@@ -152,6 +152,8 @@ lu_int lu_setup_bump(
             /* reappend line to list end */
             lu_list_move(j, 0, Wflink, Wblink, 2*m, NULL);
         }
+        if (!have_buckets)
+            lu_list_add(j, cnz, colcount_flink, colcount_blink, m, &min_colnz);
     }
 
     /*

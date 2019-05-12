@@ -1,16 +1,17 @@
-lu_int basiclu_obj_factorize
+lu_int basiclu_obj_factorize_buckets
 (
     struct basiclu_object *obj,
     const lu_int Bbegin[],
     const lu_int Bend[],
     const lu_int Bi[],
-    const double Bx[]
+    const double Bx[],
+    const lu_int *buckets
 );
 
 /*
 Purpose:
 
-    Call basiclu_factorize() on a BASICLU object.
+    Call basiclu_factorize_buckets() on a BASICLU object.
 
 Return:
 
@@ -22,7 +23,7 @@ Return:
 
         reallocation failed because of insufficient memory.
 
-    Other return codes are passed through from basiclu_factorize().
+    Other return codes are passed through from basiclu_factorize_buckets().
 
 Arguments:
 
@@ -30,5 +31,5 @@ Arguments:
 
         Pointer to an initialized BASICLU object.
 
-    The other arguments are passed through to basiclu_factorize().
+    The other arguments are passed through to basiclu_factorize_buckets().
 */

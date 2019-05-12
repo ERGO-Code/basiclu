@@ -1,7 +1,7 @@
 /*
  * basiclu_object.c
  *
- * Copyright (C) 2016-2018  ERGO-Code
+ * Copyright (C) 2016-2019  ERGO-Code
  *
  */
 
@@ -200,27 +200,40 @@ void basiclu_obj_free(struct basiclu_object *obj)
 /*
  * basiclu_obj_factorize()
  */
-lu_int basiclu_obj_factorize(struct basiclu_object *obj, const lu_int *Bbegin,
-                             const lu_int *Bend, const lu_int *Bi,
-                             const double *Bx)
+lu_int basiclu_obj_factorize(struct basiclu_object *obj, const lu_int Bbegin[],
+                             const lu_int Bend[], const lu_int Bi[],
+                             const double Bx[])
+{
+    return basiclu_obj_factorize_buckets(obj, Bbegin, Bend, Bi, Bx, NULL);
+}
+
+/*
+ * basiclu_obj_factorize_buckets()
+ */
+lu_int basiclu_obj_factorize_buckets(struct basiclu_object *obj,
+                                     const lu_int Bbegin[], const lu_int Bend[],
+                                     const lu_int Bi[], const double Bx[],
+                                     const lu_int *buckets)
 {
     lu_int status;
 
     if (!isvalid(obj))
         return BASICLU_ERROR_invalid_object;
 
-    status = basiclu_factorize(obj->istore, obj->xstore, obj->Li, obj->Lx,
-                               obj->Ui, obj->Ux, obj->Wi, obj->Wx, Bbegin, Bend,
-                               Bi, Bx, 0);
+    status = basiclu_factorize_buckets(obj->istore, obj->xstore,
+                                       obj->Li, obj->Lx, obj->Ui, obj->Ux,
+                                       obj->Wi, obj->Wx,
+                                       Bbegin, Bend, Bi, Bx, buckets, 0);
 
     while (status == BASICLU_REALLOCATE)
     {
         status = lu_realloc_obj(obj);
         if (status != BASICLU_OK)
             break;
-        status = basiclu_factorize(obj->istore, obj->xstore, obj->Li, obj->Lx,
-                                   obj->Ui, obj->Ux, obj->Wi, obj->Wx, Bbegin,
-                                   Bend, Bi, Bx, 1);
+        status = basiclu_factorize_buckets(obj->istore, obj->xstore,
+                                           obj->Li, obj->Lx, obj->Ui, obj->Ux,
+                                           obj->Wi, obj->Wx,
+                                           Bbegin, Bend, Bi, Bx, buckets, 1);
     }
 
     return status;

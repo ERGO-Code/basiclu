@@ -18,6 +18,7 @@
 #define BASICLU_RANKDEF 261
 #define BASICLU_MIN_COLNZ 262
 #define BASICLU_MIN_ROWNZ 263
+#define BASICLU_BUCKET_PTR 264
 #define BASICLU_MARKER 266
 #define BASICLU_UPDATE_COST_NUMER 267
 #define BASICLU_UPDATE_COST_DENOM 268
@@ -102,6 +103,7 @@ lu_int lu_load(
     this->residual_test         = xstore[BASICLU_RESIDUAL_TEST];
 
     this->matrix_nz             = xstore[BASICLU_MATRIX_NZ];
+    this->nbuckets              = xstore[BASICLU_NBUCKETS];
     this->rank                  = xstore[BASICLU_RANK];
     this->bump_size             = xstore[BASICLU_BUMP_SIZE];
     this->bump_nz               = xstore[BASICLU_BUMP_NZ];
@@ -126,6 +128,7 @@ lu_int lu_load(
     this->rankdef               = xstore[BASICLU_RANKDEF];
     this->min_colnz             = xstore[BASICLU_MIN_COLNZ];
     this->min_rownz             = xstore[BASICLU_MIN_ROWNZ];
+    this->bucket_ptr            = xstore[BASICLU_BUCKET_PTR];
 
     /* aliases to user arrays */
     this->Lindex = Li; this->Lvalue = Lx;
@@ -245,6 +248,7 @@ lu_int lu_save(
     xstore[BASICLU_RESIDUAL_TEST]           = this->residual_test;
 
     xstore[BASICLU_MATRIX_NZ]               = this->matrix_nz;
+    xstore[BASICLU_NBUCKETS]                = this->nbuckets;
     xstore[BASICLU_RANK]                    = this->rank;
     xstore[BASICLU_BUMP_SIZE]               = this->bump_size;
     xstore[BASICLU_BUMP_NZ]                 = this->bump_nz;
@@ -269,6 +273,7 @@ lu_int lu_save(
     xstore[BASICLU_RANKDEF]                 = this->rankdef;
     xstore[BASICLU_MIN_COLNZ]               = this->min_colnz;
     xstore[BASICLU_MIN_ROWNZ]               = this->min_rownz;
+    xstore[BASICLU_BUCKET_PTR]              = this->bucket_ptr;
 
     return status;
 }
@@ -310,6 +315,7 @@ void lu_reset(struct lu *this)
     this->residual_test = 0;
 
     this->matrix_nz = 0;
+    this->nbuckets = 0;
     this->rank = 0;
     this->bump_size = 0;
     this->bump_nz = 0;
@@ -334,6 +340,7 @@ void lu_reset(struct lu *this)
     this->rankdef = 0;
     this->min_colnz = 1;
     this->min_rownz = 1;
+    this->bucket_ptr = 0;
 
     /*
      * One past the final position in @Wend must hold the file size.

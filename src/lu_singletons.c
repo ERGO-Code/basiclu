@@ -140,7 +140,7 @@ static lu_int singleton_rows
 
 lu_int lu_singletons(
     struct lu *this, const lu_int *Bbegin, const lu_int *Bend, const lu_int *Bi,
-    const double *Bx)
+    const double *Bx, const lu_int *buckets)
 {
     const lu_int m      = this->m;
     const lu_int Lmem   = this->Lmem;
@@ -228,7 +228,7 @@ lu_int lu_singletons(
             i = Bi[pos];
             put = iwork1[i]++;
             Bti[put] = j;
-            Btx[put] = Bx [pos];
+            Btx[put] = Bx[pos];
             if (put > Btp[i] && Bti[put-1] == j)
                 ok = 0;
         }
@@ -236,20 +236,66 @@ lu_int lu_singletons(
     if (!ok)
         return BASICLU_ERROR_invalid_argument;
 
-    /* ---------------- */
-    /* Pivot singletons */
-    /* ---------------- */
+    /* If buckets are given, check that all of them are in range [0,m-1].
+     * Then sort column indices 0..m-1 by order of nondecreasing bucket value
+     * in Lbegin_p[1..m]. Use qinv as workspace for bucket sort, taking O(m)
+     * time. If column index j is the first one in its bucket, store it flipped.
+     */
+    if (buckets)
+    {
+        memset(qinv, 0, m*sizeof(lu_int));
+        ok = 1;
+        for (j = 0; j < m; j++)
+        {
+            if (buckets[j] < 0 || buckets[j] >= m)
+                ok = 0;
+            else
+                qinv[buckets[j]]++;
+        }
+        if (!ok)
+            return BASICLU_ERROR_invalid_argument;
+        for (i = 0; i < m-1; i++)
+            qinv[i+1] += qinv[i];
+        assert(qinv[m-1] == m);
+        for (j = 0; j < m; j++)
+            Lbegin_p[qinv[buckets[j]]--] = j;
+#ifndef NDEBUG
+        for (pos = 2; pos <= m; pos++)
+        {
+            assert(buckets[Lbegin_p[pos]] >= buckets[Lbegin_p[pos-1]]);
+        }
+#endif
+        this->nbuckets = 0;
+        for (pos = 1; pos <= m; pos++)
+        {
+            if (pos == 1 || buckets[Lbegin_p[pos]] != buckets[Lbegin_p[pos-1]])
+            {
+                Lbegin_p[pos] = -Lbegin_p[pos]-1;
+                this->nbuckets++;
+            }
+        }
+        this->bucket_ptr = 1;
+    }
 
     /* No pivot rows or pivot columns so far. */
     for (i = 0; i < m; i++)
         pinv[i] = -1;
     for (j = 0; j < m; j++)
         qinv[j] = -1;
+    Lbegin_p[0] = Ubegin[0] = 0;
+    this->matrix_nz = Bnz;
 
+    /* If buckets are given, then do not eliminate singletons. */
+    if (buckets)
+        return BASICLU_OK;
+
+    /* ---------------- */
+    /* Pivot singletons */
+    /* ---------------- */
+
+    rank = 0;
     if (nzbias >= 0)            /* put more in U */
     {
-        Lbegin_p[0] = Ubegin[0] = rank = 0;
-
         rank = singleton_cols(m, Bbegin, Bend, Bi, Bx, Btp, Bti, Btx,
                               Ubegin, Uindex, Uvalue, Lbegin_p, Lindex, Lvalue,
                               col_pivot, pinv, qinv, iwork1, iwork2, rank,
@@ -262,8 +308,6 @@ lu_int lu_singletons(
     }
     else                        /* put more in L */
     {
-        Lbegin_p[0] = Ubegin[0] = rank = 0;
-
         rank = singleton_rows(m, Bbegin, Bend, Bi, Bx, Btp, Bti, Btx,
                               Ubegin, Uindex, Uvalue, Lbegin_p, Lindex, Lvalue,
                               col_pivot, pinv, qinv, iwork1, iwork2, rank,
@@ -283,7 +327,6 @@ lu_int lu_singletons(
         if (qinv[j] < 0)
             qinv[j] = -1;
 
-    this->matrix_nz = Bnz;
     this->rank = rank;
     this->time_singletons = lu_toc(tic);
     return BASICLU_OK;
