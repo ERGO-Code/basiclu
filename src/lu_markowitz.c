@@ -54,7 +54,7 @@ lu_int lu_markowitz(struct lu *this)
         MIN(this->min_colnz, this->min_rownz) : this->min_colnz;
 
     lu_int i, j, pos, where, inext, nz, pivot_row, pivot_col;
-    lu_int nsearch, cheap, found, min_colnz, min_rownz;
+    lu_int ncol_searched, nrow_searched, cheap, found, min_colnz, min_rownz;
     double cmx, x, tol, tic[2];
 
     /* integers for Markowitz cost must be 64 bit to prevent overflow */
@@ -65,7 +65,8 @@ lu_int lu_markowitz(struct lu *this)
     pivot_row = -1;             /* row of best pivot so far */
     pivot_col = -1;             /* col of best pivot so far */
     MC = M*M;                   /* Markowitz cost of best pivot so far */
-    nsearch = 0;                /* count rows/columns searched */
+    ncol_searched = 0;          /* # columns searched for pivot */
+    nrow_searched = 0;          /* # rows searched for pivot */
     min_colnz = -1;             /* minimum col count in active submatrix */
     min_rownz = -1;             /* minimum row count in active submatrix */
     assert(nz_start >= 1);
@@ -82,9 +83,13 @@ lu_int lu_markowitz(struct lu *this)
 
     for (nz = nz_start; nz <= m; nz++)
     {
+        if (ncol_searched == this->ncol_active)
+            goto done;
+
         /* Search columns with nz nonzeros. */
         for (j = colcount_flink[m+nz]; j < m; j = colcount_flink[j])
         {
+            ncol_searched++;
             if (min_colnz == -1)
                 min_colnz = nz;
             assert(Wend[j] - Wbegin[j] == nz);
@@ -115,7 +120,7 @@ lu_int lu_markowitz(struct lu *this)
             }
             /* We have seen at least one eligible pivot in column j. */
             assert(MC < M*M);
-            if (++nsearch >= maxsearch)
+            if (ncol_searched+nrow_searched >= maxsearch)
                 goto done;
         }
         assert(j == m+nz);
@@ -126,6 +131,7 @@ lu_int lu_markowitz(struct lu *this)
         /* Search rows with nz nonzeros. */
         for (i = rowcount_flink[m+nz]; i < m; i = inext)
         {
+            nrow_searched++;
             if (min_rownz == -1)
                 min_rownz = nz;
             /* rowcount_flink[i] might be changed below, so keep a copy */
@@ -171,7 +177,7 @@ lu_int lu_markowitz(struct lu *this)
             else
             {
                 assert(MC < M*M);
-                if (++nsearch >= maxsearch)
+                if (ncol_searched+nrow_searched >= maxsearch)
                     goto done;
             }
         }
@@ -181,7 +187,7 @@ lu_int lu_markowitz(struct lu *this)
 done:
     this->pivot_row = pivot_row;
     this->pivot_col = pivot_col;
-    this->nsearch_pivot += nsearch;
+    this->nsearch_pivot += ncol_searched+nrow_searched;
     if (min_colnz >= 0)
         this->min_colnz = min_colnz;
     if (min_rownz >= 0)

@@ -96,8 +96,8 @@ struct lu
     lu_int btran_for_update;    /* >= 0 if BTRAN prepared for update */
     lu_int marker;              /* see @marked, below */
     lu_int pivotlen;            /* length of @pivotcol, @pivotrow; <= 2*m */
-    lu_int rankdef;             /* # columns removed from active submatrix
-                                   because maximum was 0 or < abstol */
+    lu_int rankdef;             /* # columns removed without pivot operation */
+    lu_int ncol_active;         /* # columns in lists */
     lu_int min_colnz;           /* colcount lists 1..min_colnz-1 are empty */
     lu_int min_rownz;           /* rowcount lists 1..min_rownz-1 are empty */
     lu_int bucket_ptr;          /* 1 <= bucket_ptr <= m is the beginning of the

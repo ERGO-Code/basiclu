@@ -25,6 +25,7 @@ lu_int lu_factorize_bump(struct lu *this)
     {
         if (this->bucket_ptr == this->rank+this->rankdef+1)
             lu_next_bucket(this);
+        assert(this->ncol_active > 0);
 
         /*
          * Find pivot element. Markowitz search need not be called if the
@@ -41,6 +42,7 @@ lu_int lu_factorize_bump(struct lu *this)
             lu_list_remove(colcount_flink, colcount_blink, this->pivot_col);
             this->pivot_col = -1;
             this->rankdef++;
+            this->ncol_active--;
         }
         else
         {
@@ -55,6 +57,7 @@ lu_int lu_factorize_bump(struct lu *this)
             this->pivot_col = -1;
             this->pivot_row = -1;
             this->rank++;
+            this->ncol_active--;
         }
     }
     return status;
@@ -73,6 +76,7 @@ static void lu_next_bucket(struct lu *this)
 
     assert(bucket_ptr >= 1 && bucket_ptr <= m);
     assert(Lbegin_p[bucket_ptr] < 0);
+    assert(this->ncol_active == 0);
 
     do {
         j = Lbegin_p[bucket_ptr++];
@@ -80,6 +84,7 @@ static void lu_next_bucket(struct lu *this)
         assert(this->qinv[j] < 0);
         nz = Wend[j] - Wbegin[j];
         lu_list_add(j, nz, colcount_flink, colcount_blink, m, &this->min_colnz);
+        this->ncol_active++;
     } while (bucket_ptr <= m && Lbegin_p[bucket_ptr] >= 0);
 
     this->bucket_ptr = bucket_ptr;

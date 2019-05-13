@@ -111,6 +111,7 @@ lu_int lu_setup_bump(
      * Build columnwise storage. Build row counts in iwork0.
      */
     lu_list_init(colcount_flink, colcount_blink, m, m+2, &min_colnz);
+    this->ncol_active = 0;
     put = 0;
     for (j = 0; j < m; j++)
     {
@@ -153,7 +154,10 @@ lu_int lu_setup_bump(
             lu_list_move(j, 0, Wflink, Wblink, 2*m, NULL);
         }
         if (!have_buckets)
+        {
             lu_list_add(j, cnz, colcount_flink, colcount_blink, m, &min_colnz);
+            this->ncol_active++;
+        }
     }
 
     /*
