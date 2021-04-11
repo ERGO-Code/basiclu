@@ -6,7 +6,7 @@ using MAT
 
 function readmat(file, names...)
     n = length(names)
-    objects = Array{Any}(n)
+    objects = Array{Any}(undef,n)
     f1 = matopen(file)
     for k = 1:n
         objects[k] = read(f1, names[k])
@@ -34,7 +34,7 @@ function test_factorize(testdir::String, trans=false)
         end
         @printf(" %-24s", f)
         B, = readmat(string(testdir, f), "B")
-        Bt = transpose(B)
+        Bt = sparse(transpose(B))
         if trans
             (B,Bt) = (Bt,B)
         end
@@ -88,9 +88,9 @@ function test_update(testdir::String)
         invar = invar[:]
         outvar = outvar[:]
         m,n = size(A)
-        A1 = [A speye(m)]
-        basis = Array{cint}(m)
-        basis[:] = collect(1:m) + n # slack basis
+        A1 = [A sparse(1.0I, m, m)]
+        basis = Array{cint}(undef,m)
+        basis[:] = collect(1:m) .+ n # slack basis
         res,nfactor,nforrest,nperm = test_update(A1, basis, invar, outvar)
         @printf("%.2e      %5d factor, %6d forrest, %6d perm\n",
                 res, nfactor, nforrest, nperm)

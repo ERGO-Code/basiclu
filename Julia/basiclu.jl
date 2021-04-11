@@ -7,6 +7,10 @@
 
 module basiclu
 
+using LinearAlgebra
+using Printf
+using SparseArrays
+
 const cint = Int64
 const cdbl = Cdouble
 const cint_ptr = Ptr{cint}
@@ -114,12 +118,12 @@ const realloc_factor = 1.5
 # type BLU
 # =============================================================================
 """
-    type BLU
+    mutable struct BLU
 
 Hold BASICLU object. You can access @xstore to set parameters and get output
 values from BASICLU routines.
 """
-type BLU
+mutable struct BLU
     istore::Array{cint,1}
     xstore::Array{cdbl,1}
     Li::Array{cint,1}
@@ -134,16 +138,16 @@ type BLU
         isize = BASICLU_SIZE_ISTORE_1 + BASICLU_SIZE_ISTORE_M * m
         xsize = BASICLU_SIZE_XSTORE_1 + BASICLU_SIZE_XSTORE_M * m
         fsize = m               # initial length of Li, Lx, Ui, Ux, Wi, Wx
-        istore = Array{cint}(isize)
-        xstore = Array{cdbl}(xsize)
-        Li = Array{cint}(fsize)
-        Lx = Array{cdbl}(fsize)
-        Ui = Array{cint}(fsize)
-        Ux = Array{cdbl}(fsize)
-        Wi = Array{cint}(fsize)
-        Wx = Array{cdbl}(fsize)
+        istore = Array{cint}(undef,isize)
+        xstore = Array{cdbl}(undef,xsize)
+        Li = Array{cint}(undef,fsize)
+        Lx = Array{cdbl}(undef,fsize)
+        Ui = Array{cint}(undef,fsize)
+        Ux = Array{cdbl}(undef,fsize)
+        Wi = Array{cint}(undef,fsize)
+        Wx = Array{cdbl}(undef,fsize)
         work0 = zeros(cdbl, m)
-        iwork = Array{cint}(m)
+        iwork = Array{cint}(undef,m)
         err = ccall((:basiclu_initialize, "libbasiclu.so"), cint,
                     (cint, cint_ptr, cdbl_ptr), m, istore, xstore)
         if err != BASICLU_OK
@@ -200,10 +204,10 @@ end
 
 function gather_work(this::BLU, nz::cint)
     m = convert(cint, this.xstore[BASICLU_DIM])
-    nzind = this.iwork[1:nz] + 1
+    nzind = this.iwork[1:nz] .+ 1
     sort!(nzind)
     lhs = spvector(m, nzind, this.work0[nzind])
-    this.work0[nzind] = 0
+    this.work0[nzind] .= 0
     return lhs
 end
 
@@ -235,8 +239,8 @@ function factorize(this::BLU, B::spmatrix)
     nrow, ncol = size(B)
     @assert nrow == ncol
     @assert nrow == m
-    Bp = B.colptr-1
-    Bi = B.rowval-1
+    Bp = B.colptr.-1
+    Bi = B.rowval.-1
     Bx = B.nzval                # don't need a copy
     c0ntinue = 0
     err = BASICLU_OK
@@ -279,14 +283,14 @@ function get_factors(this::BLU)
     m = convert(cint, this.xstore[BASICLU_DIM])
     Lnz = convert(cint, this.xstore[BASICLU_LNZ])
     Unz = convert(cint, this.xstore[BASICLU_UNZ])
-    rowperm = Array{cint}(m)
-    colperm = Array{cint}(m)
-    Lp = Array{cint}(m+1)
-    Li = Array{cint}(Lnz+m)
-    Lx = Array{cdbl}(Lnz+m)
-    Up = Array{cint}(m+1)
-    Ui = Array{cint}(Unz+m)
-    Ux = Array{cdbl}(Unz+m)
+    rowperm = Array{cint}(undef,m)
+    colperm = Array{cint}(undef,m)
+    Lp = Array{cint}(undef,m+1)
+    Li = Array{cint}(undef,Lnz+m)
+    Lx = Array{cdbl}(undef,Lnz+m)
+    Up = Array{cint}(undef,m+1)
+    Ui = Array{cint}(undef,Unz+m)
+    Ux = Array{cdbl}(undef,Unz+m)
     err = ccall((:basiclu_get_factors, "libbasiclu.so"), cint,
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
@@ -300,10 +304,10 @@ function get_factors(this::BLU)
         msg = @sprintf("basiclu_get_factors() status code: %d", err)
         error(msg)
     end
-    rowperm += 1
-    colperm += 1
-    L = spmatrix(m, m, Lp+1, Li+1, Lx)
-    U = spmatrix(m, m, Up+1, Ui+1, Ux)
+    rowperm .+= 1
+    colperm .+= 1
+    L = spmatrix(m, m, Lp.+1, Li.+1, Lx)
+    U = spmatrix(m, m, Up.+1, Ui.+1, Ux)
     @assert istril(L)
     @assert istriu(U)
     return (L, U, rowperm, colperm)
@@ -326,11 +330,11 @@ forward solve.
 function solve(this::BLU, rhs::cvec, trans::Char) # dense solve
     m = convert(cint, this.xstore[BASICLU_DIM])
     @assert length(rhs) == m
-    lhs = cvec(m)
+    lhs = cvec(undef,m)
     err = ccall((:basiclu_solve_dense, "libbasiclu.so"), cint,
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
-                 cdbl_ptr, cdbl_ptr, Char),
+                 cdbl_ptr, cdbl_ptr, Cchar),
                 this.istore, this.xstore,
                 this.Li, this.Lx, this.Ui, this.Ux, this.Wi, this.Wx,
                 rhs, lhs, trans)
@@ -349,10 +353,10 @@ function solve(this::BLU, rhs::spvector, trans::Char) # sparse solve
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                  cint, cint_ptr, cdbl_ptr,
-                 Ref{cint}, cint_ptr, cdbl_ptr, Char),
+                 Ref{cint}, cint_ptr, cdbl_ptr, Cchar),
                 this.istore, this.xstore,
                 this.Li, this.Lx, this.Ui, this.Ux, this.Wi, this.Wx,
-                nnz(rhs), rhs.nzind-1, rhs.nzval,
+                nnz(rhs), rhs.nzind.-1, rhs.nzval,
                 nzlhs, this.iwork, this.work0, trans)
     nzlhs = nzlhs[]
     lhs = gather_work(this, nzlhs)
@@ -390,7 +394,7 @@ function solve4update(this::BLU, rhs, getsolution::Bool=false)
         @assert length(rhs) == m
     end
     nzrhs = trans ? 0 : nnz(rhs)
-    irhs = trans ? Ref{cint}(rhs-1) : rhs.nzind-1
+    irhs = trans ? Ref{cint}(rhs-1) : rhs.nzind.-1
     xrhs = trans ? C_NULL : rhs.nzval
     nzlhs = getsolution ? Ref{cint}(0) : C_NULL
     err = BASICLU_OK
@@ -399,7 +403,7 @@ function solve4update(this::BLU, rhs, getsolution::Bool=false)
                     (cint_ptr, cdbl_ptr,
                      cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                      cint, cint_ptr, cdbl_ptr,
-                     cint_ptr, cint_ptr, cdbl_ptr, Char),
+                     cint_ptr, cint_ptr, cdbl_ptr, Cchar),
                     this.istore, this.xstore,
                     this.Li, this.Lx, this.Ui, this.Ux, this.Wi, this.Wx,
                     nzrhs, irhs, xrhs,
