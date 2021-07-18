@@ -144,6 +144,7 @@ typedef int64_t lu_int;
 #include "basiclu_obj_solve_sparse.h"
 #include "basiclu_obj_solve_for_update.h"
 #include "basiclu_obj_update.h"
+#include "basiclu_obj_maxvolume.h"
 #include "basiclu_obj_free.h"
 
 #ifdef __cplusplus

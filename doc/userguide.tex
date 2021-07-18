@@ -133,8 +133,7 @@ The high level C interface consists of wrapper functions around the low level
 interface which do memory allocation. They maintain the arrays used by the low
 level interface inside a \ct{struct basiclu\_object}. To use the high level C
 interface, user code must include \ct{basiclu.h}. Defined constants start with
-\ct{BASICLU\_} and function names start with \ct{basiclu\_obj\_}. See
-\ct{example/maxvolume.c} for an application using the high level C interface.
+\ct{BASICLU\_} and function names start with \ct{basiclu\_obj\_}.
 
 \newpage
 \subsection{basiclu\_object}
@@ -188,6 +187,12 @@ interface, user code must include \ct{basiclu.h}. Defined constants start with
 \subsection{basiclu\_obj\_free}
 {\footnotesize
 \input{basiclu_obj_free}
+}
+
+\newpage
+\subsection{basiclu\_obj\_maxvolume}
+{\footnotesize
+\input{basiclu_obj_maxvolume}
 }
 \newpage
  

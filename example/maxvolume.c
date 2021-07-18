@@ -55,9 +55,12 @@
  *               default: 2
  *
  * [1] C. T. Pan, "On the existence and computation of rank-revealing LU
- *     factorizations", Linear Algebra Appl., 2000
+ *     factorizations". Linear Algebra Appl., 316(1-3), pp. 199-222, 2000
+ *
  * [2] S. A. Goreinov, I. V. Oseledets, D. V. Savostyanov, E. E. Tyrtyshnikov,
- *     N. L. Zamarashkin, "How to find a good submatrix", technical report, 2008
+ *     N. L. Zamarashkin, "How to find a good submatrix". In "Matrix methods:
+ *     theory, algorithms and applications", pp. 247-256. World Sci. Publ.,
+ *     Hackensack, NJ, 2010.
  */
 
 #include <stdlib.h>
@@ -68,11 +71,6 @@
 
 /* internal error codes, supplementing BASICLU status codes */
 #define IO_ERROR 102
-
-static lu_int maxvolume(struct basiclu_object *factor, lu_int ncol,
-                        const lu_int *Ap, const lu_int *Ai, const double *Ax,
-                        lu_int *basis, lu_int *isbasic, double volumetol,
-                        lu_int *p_nupdate);
 
 int main(int argc, const char *argv[])
 {
@@ -102,6 +100,7 @@ int main(int argc, const char *argv[])
         volumetol = atof(argv[2]);
     if (argc >= 4)
         maxpass = atol(argv[3]);
+    volumetol = fmax(volumetol, 1.0);
 
     err = mm_read_unsymmetric_sparse(argv[1], &mm_M, &mm_N, &mm_nz,
                                      &mm_val, &mm_I, &mm_J);
@@ -188,11 +187,12 @@ int main(int argc, const char *argv[])
     for (pass = 0; pass < maxpass && changed; pass++)
     {
         lu_int nupdate;
-        err = maxvolume(&factor, m+n, Ap, Ai, Ax, basis, isbasic, volumetol,
-                        &nupdate);
+        err = basiclu_obj_maxvolume(&factor, m+n, Ap, Ai, Ax, basis, isbasic,
+                                    volumetol, &nupdate);
         if (err != BASICLU_OK)
             goto cleanup;
         changed = nupdate > 0;
+        printf(" pass %d: %d updates\n", pass+1, nupdate);
     }
 
     /*
@@ -237,167 +237,4 @@ cleanup:
     if (err != BASICLU_OK)
         printf(" error (%ld)\n", (long) err);
     return err;
-}
-
-/*
- * factorize() - factorize A[:,basis]
- */
-static lu_int factorize(struct basiclu_object *factor, const lu_int *Ap,
-                        const lu_int *Ai, const double *Ax, const lu_int *basis)
-{
-    double *xstore = factor->xstore;
-    const lu_int m = xstore[BASICLU_DIM];
-    lu_int *begin = NULL;
-    lu_int *end = NULL;
-    lu_int i, status = BASICLU_OK;
-
-    begin = malloc(m*sizeof(lu_int));
-    end = malloc(m*sizeof(lu_int));
-    if (!begin || !end) {
-        status = BASICLU_ERROR_out_of_memory;
-        goto cleanup;
-    }
-    for (i = 0; i < m; i++)
-    {
-        begin[i] = Ap[basis[i]];
-        end[i] = Ap[basis[i]+1];
-    }
-
-    status = basiclu_obj_factorize(factor, begin, end, Ai, Ax);
-
-cleanup:
-    if (begin) free(begin);
-    if (end) free(end);
-
-    return status;
-}
-
-/*
- * refactorize_if_needed() - refactorize the basis if required or favourable
- *
- * The basis matrix is refactorized if
- * - the maximum number of updates is reached, or
- * - the previous update had a large pivot error, or
- * - it is favourable for performance
- *
- * factorize() is called for the actual factorization.
- *
- * Note: refactorize_if_needed() will not do an initial factorization.
- */
-static lu_int refactorize_if_needed(struct basiclu_object *factor,
-                                    const lu_int *Ap,
-                                    const lu_int *Ai,
-                                    const double *Ax,
-                                    const lu_int *basis)
-{
-    lu_int status = BASICLU_OK;
-    const double piverr_tol = 1e-8;
-    double *xstore = factor->xstore;
-
-    if (xstore[BASICLU_NFORREST] == xstore[BASICLU_DIM] ||
-        xstore[BASICLU_PIVOT_ERROR] > piverr_tol ||
-        xstore[BASICLU_UPDATE_COST] > 1.0)
-        status = factorize(factor, Ap, Ai, Ax, basis);
-    return status;
-}
-
-/*
- * print_log() - print log message to stdout all 3 sec
- */
-static void print_log(struct basiclu_object *factor)
-{
-    double *xstore = factor->xstore;
-    long nfactor = xstore[BASICLU_NFACTORIZE];
-    long nupdate = xstore[BASICLU_NUPDATE_TOTAL];
-    double total_time = xstore[BASICLU_TIME_FACTORIZE_TOTAL] +
-                        xstore[BASICLU_TIME_UPDATE_TOTAL] +
-                        xstore[BASICLU_TIME_SOLVE_TOTAL];
-    static double last_log = 0;
-
-    if (total_time - last_log > 3.0) {
-        printf(" %6.1fs  %6ld update  %3ld factor\n", total_time,
-               nupdate, nfactor);
-        last_log = total_time;
-    }
-}
-
-/*
- * maxvolume() - one pass over columns of A doing basis updates
- *
- * For each column a_j not in B, compute lhs = B^{-1}*a_j and find the maximum
- * entry lhs[imax]. If it is bigger than @volumetol in absolute value, then
- * replace position imax of the basis by index j. On return *p_nupdate is the
- * number of basis updates done.
- */
-static lu_int maxvolume(struct basiclu_object *factor, lu_int ncol,
-                        const lu_int *Ap, const lu_int *Ai, const double *Ax,
-                        lu_int *basis, lu_int *isbasic, double volumetol,
-                        lu_int *p_nupdate)
-{
-    lu_int i, j, k;
-    lu_int nzrhs, imax, begin, nupdate = 0;
-    double xtbl, xmax;
-    lu_int status = BASICLU_OK;
-
-    print_log(factor);
-
-    /* Compute initial factorization. */
-    status = factorize(factor, Ap, Ai, Ax, basis);
-    if (status != BASICLU_OK)
-        goto cleanup;
-
-    for (j = 0; j < ncol; j++)
-    {
-        if (isbasic[j])
-            continue;
-
-        print_log(factor);
-
-        /* compute B^{-1}*a_j */
-        nzrhs = Ap[j+1] - Ap[j];
-        begin = Ap[j];
-        status = basiclu_obj_solve_for_update(factor, nzrhs, Ai+begin, Ax+begin,
-                                              'N', 1);
-        if (status != BASICLU_OK)
-            goto cleanup;
-
-        /* Find the maximum entry. */
-        xmax = 0.0;
-        xtbl = 0.0;
-        imax = 0;
-        for (k = 0; k < factor->nzlhs; k++) {
-            i = factor->ilhs[k];
-            if (fabs(factor->lhs[i]) > xmax) {
-                xtbl = factor->lhs[i];
-                xmax = fabs(xtbl);
-                imax = i;
-            }
-        }
-
-        if (xmax <= volumetol)
-            continue;
-
-        /* Update basis. */
-        isbasic[basis[imax]] = 0;
-        isbasic[j] = 1;
-        basis[imax] = j;
-        nupdate++;
-
-        /* Prepare to update factorization. */
-        status = basiclu_obj_solve_for_update(factor, 0, &imax, NULL, 'T', 0);
-        if (status != BASICLU_OK)
-            goto cleanup;
-
-        status = basiclu_obj_update(factor, xtbl);
-        if (status != BASICLU_OK)
-            goto cleanup;
-
-        status = refactorize_if_needed(factor, Ap, Ai, Ax, basis);
-        if (status != BASICLU_OK)
-            goto cleanup;
-    }
-
-cleanup:
-    *p_nupdate = nupdate;
-    return status;
 }
