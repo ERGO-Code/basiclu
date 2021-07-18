@@ -207,7 +207,7 @@ documentation of the module functions and \ct{Julia/test.jl}.
 include("BASICLU/Julia/basiclu.jl")
 m = 1000
 this = basiclu.initialize(m)
-B = sprand(m,m,5e-3) + speye(m)              # get a sparse matrix
+B = sprand(m,m,5e-3) + I                     # get a sparse matrix
 err = basiclu.factorize(this, B)
 if err != basiclu.BASICLU_OK
   error("factorization failed or singular")
@@ -215,9 +215,9 @@ end
 rhs = randn(m)                               # get a right-hand side
 lhs = basiclu.solve(this, rhs, 'N')
 res = norm(B*lhs-rhs,Inf)                    # compute residual
-col = speye(m)[:,1]                          # unit vector to be inserted into B
+col = sparsevec([1], [1.0], m)               # unit vector to be inserted into B
 lhs = basiclu.solve4update(this, col, true)
-(vmax,j) = findmax(abs(lhs))
+(vmax,j) = findmax(abs.(lhs))
 xtbl = lhs[j]
 basiclu.solve4update(this, j)                # prepare to replace column j of B
 piverr = basiclu.update(this, xtbl)
