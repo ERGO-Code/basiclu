@@ -94,11 +94,12 @@ VERSION = 2.1.0
 SO_VERSION = 2
 
 ifeq ($(UNAME),Windows)
-    # Cygwin Make on Windows (untested)
+    # Cygwin / Mingw Make on Windows
     AR_TARGET = $(LIBRARY).lib
     SO_PLAIN  = $(LIBRARY).dll
     SO_MAIN   = $(LIBRARY).$(SO_VERSION).dll
     SO_TARGET = $(LIBRARY).$(VERSION).dll
+    SO_OPTS   = -shared
     SO_INSTALL_NAME = echo
 else
     # Mac or Linux/Unix
