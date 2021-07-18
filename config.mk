@@ -28,6 +28,11 @@ BASICLU_VERSION = 2.1.0
     # compiler flags for the C compiler
     #---------------------------------------------------------------------------
 
+    # If the system does not support clock_gettime() with CLOCK_MONOTONIC_RAW,
+    # then turn off the timer completely. In this case the statistics reported
+    # by basiclu do not contain timings. The results are not affected.
+    # CPPFLAGS += -DBASICLU_NOTIMER
+
     # The CF macro is used as a combination of
     # CFLAGS, CPPFLAGS, TARGET_ARCH, and system-dependent settings.
     CF = $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) $(OPTIMIZATION) -fPIC
