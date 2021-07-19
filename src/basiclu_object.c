@@ -177,6 +177,16 @@ lu_int basiclu_obj_initialize(struct basiclu_object *obj, lu_int m)
 }
 
 /*
+ * basiclu_obj_get_dim()
+ */
+lu_int basiclu_obj_get_dim(struct basiclu_object *obj)
+{
+    if (!obj || !obj->xstore)
+        return 0;
+    return (lu_int) obj->xstore[BASICLU_DIM];
+}
+
+/*
  * basiclu_obj_free()
  */
 void basiclu_obj_free(struct basiclu_object *obj)
