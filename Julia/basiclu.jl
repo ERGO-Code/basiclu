@@ -457,4 +457,97 @@ function update(this::BLU, xtbl::cdbl)
     return this.xstore[BASICLU_PIVOT_ERROR]
 end
 
+# =============================================================================
+# high level interface for maxvolume()
+# =============================================================================
+
+mutable struct basiclu_object
+    istore::Ptr{cint}
+    xstore::Ptr{cdbl}
+    Li::Ptr{cint}
+    Ui::Ptr{cint}
+    Wi::Ptr{cint}
+    Lx::Ptr{cdbl}
+    Ux::Ptr{cdbl}
+    Wx::Ptr{cdbl}
+    lhs::Ptr{cdbl}
+    ilhs::Ptr{cint}
+    nzlhs::cint
+    realloc_factor::cdbl
+    function basiclu_object(m::cint)
+        obj = new()
+        err = ccall((:basiclu_obj_initialize, "libbasiclu.so"), cint,
+                    (Ptr{basiclu_object}, cint),
+                    pointer_from_objref(obj), m)
+        if err != BASICLU_OK
+            msg = @sprintf("basiclu_obj_initialize() status code: %d", err)
+            error(msg)
+        end
+        finalizer(obj) do x
+            ccall((:basiclu_obj_free, "libbasiclu.so"), Cvoid,
+                  (Ptr{basiclu_object},), pointer_from_objref(x))
+        end
+    end
+end
+
+function get_dim(obj::basiclu_object)
+    ccall((:basiclu_obj_get_dim, "libbasiclu.so"), cint,
+          (Ptr{basiclu_object},), pointer_from_objref(obj))
+end
+
+function maxvolume(obj::basiclu_object, A::spmatrix, basis::Array{cint,1},
+                   volumetol::cdbl=2.0)
+    m, n = size(A)
+    if m != get_dim(obj)
+        error("Number of rows of A does not match dimension of basiclu object")
+    end
+    if length(basis) != get_dim(obj)
+        error("Basis has incorrect length")
+    end
+    isbasic = zeros(cint, n)
+    isbasic[basis] .= 1
+    if sum(isbasic) != m
+        error("Duplicate index in basis")
+    end
+    cbasis = basis.-1
+    Ap = A.colptr.-1
+    Ai = A.rowval.-1
+    Ax = A.nzval                # don't need a copy
+    p_nupdate = Ref{cint}(0)
+    err = ccall((:basiclu_obj_maxvolume, "libbasiclu.so"), cint,
+                (Ptr{basiclu_object}, cint, Ptr{cint}, Ptr{cint}, Ptr{cdbl},
+                 Ptr{cint}, Ptr{cint}, cdbl, Ptr{cint}),
+                pointer_from_objref(obj), n, Ap, Ai, Ax, cbasis, isbasic,
+                volumetol, p_nupdate)
+    basis[:] = cbasis.+1
+    if err != BASICLU_OK
+        msg = @sprintf("basiclu_obj_maxvolume() status code: %d", err)
+        error(msg)
+    end
+    return p_nupdate[]
+end
+
+"""
+    basis, obj = maxvolume_basis(A::spmatrix)
+
+    Returns a set of column indices for the matrix AI = [A sparse(I, m, m)] such
+    that AI[:,basis] is nonsingular and the number of slack columns in the basis
+    is minimum (this is the row rank deficiency of A).
+"""
+function maxvolume_basis(A::spmatrix; volumetol::cdbl=2.0, lindeptol::cdbl=1e-8,
+                         maxpass::cint=2)
+    m, n = size(A)
+    rowmax = maximum(abs.(A), dims=2)[:]
+    rowmax = max.(rowmax, 1.)
+    AI = [A spdiagm(0 => lindeptol.*rowmax)]
+    basis = collect(n+1:n+m)
+    obj = basiclu_object(m)
+    for pass = 1:maxpass
+        nupdate = maxvolume(obj, AI, basis, volumetol)
+        @printf("pass %d: %d updates\n", pass, nupdate)
+        if nupdate == 0 break; end
+    end
+    return basis, obj
+end
+
 end
