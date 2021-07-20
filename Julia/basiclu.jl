@@ -474,7 +474,7 @@ mutable struct basiclu_object
     realloc_factor::cdbl
     function basiclu_object(m::cint)
         obj = new()
-        err = ccall((:basiclu_obj_initialize, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_obj_initialize, libbasiclu), cint,
                     (Ptr{basiclu_object}, cint),
                     pointer_from_objref(obj), m)
         if err != BASICLU_OK
@@ -482,14 +482,14 @@ mutable struct basiclu_object
             error(msg)
         end
         finalizer(obj) do x
-            ccall((:basiclu_obj_free, "libbasiclu.so"), Cvoid,
+            ccall((:basiclu_obj_free, libbasiclu), Cvoid,
                   (Ptr{basiclu_object},), pointer_from_objref(x))
         end
     end
 end
 
 function get_dim(obj::basiclu_object)
-    ccall((:basiclu_obj_get_dim, "libbasiclu.so"), cint,
+    ccall((:basiclu_obj_get_dim, libbasiclu), cint,
           (Ptr{basiclu_object},), pointer_from_objref(obj))
 end
 
@@ -512,7 +512,7 @@ function maxvolume(obj::basiclu_object, A::spmatrix, basis::Array{cint,1},
     Ai = A.rowval.-1
     Ax = A.nzval                # don't need a copy
     p_nupdate = Ref{cint}(0)
-    err = ccall((:basiclu_obj_maxvolume, "libbasiclu.so"), cint,
+    err = ccall((:basiclu_obj_maxvolume, libbasiclu), cint,
                 (Ptr{basiclu_object}, cint, Ptr{cint}, Ptr{cint}, Ptr{cdbl},
                  Ptr{cint}, Ptr{cint}, cdbl, Ptr{cint}),
                 pointer_from_objref(obj), n, Ap, Ai, Ax, cbasis, isbasic,
