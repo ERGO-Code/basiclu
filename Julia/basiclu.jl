@@ -1,15 +1,13 @@
 #
 # Julia interface to BASICLU
 #
-# BASICLU must have been compiled with the integer type matching cint (see
-# below). The shared library must be in the load path.
-#
 
 module basiclu
 
 using LinearAlgebra
 using Printf
 using SparseArrays
+using basiclu_jll
 
 const cint = Int64
 const cdbl = Cdouble
@@ -148,7 +146,7 @@ mutable struct BLU
         Wx = Array{cdbl}(undef,fsize)
         work0 = zeros(cdbl, m)
         iwork = Array{cint}(undef,m)
-        err = ccall((:basiclu_initialize, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_initialize, libbasiclu), cint,
                     (cint, cint_ptr, cdbl_ptr), m, istore, xstore)
         if err != BASICLU_OK
             msg = @sprintf("basiclu_initialize() status code: %d", err)
@@ -245,7 +243,7 @@ function factorize(this::BLU, B::spmatrix)
     c0ntinue = 0
     err = BASICLU_OK
     while true
-        err = ccall((:basiclu_factorize, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_factorize, libbasiclu), cint,
                     (cint_ptr, cdbl_ptr,
                      cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                      cint_ptr, cint_ptr, cint_ptr, cdbl_ptr, cint),
@@ -291,7 +289,7 @@ function get_factors(this::BLU)
     Up = Array{cint}(undef,m+1)
     Ui = Array{cint}(undef,Unz+m)
     Ux = Array{cdbl}(undef,Unz+m)
-    err = ccall((:basiclu_get_factors, "libbasiclu.so"), cint,
+    err = ccall((:basiclu_get_factors, libbasiclu), cint,
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                  cint_ptr, cint_ptr,
@@ -331,7 +329,7 @@ function solve(this::BLU, rhs::cvec, trans::Char) # dense solve
     m = convert(cint, this.xstore[BASICLU_DIM])
     @assert length(rhs) == m
     lhs = cvec(undef,m)
-    err = ccall((:basiclu_solve_dense, "libbasiclu.so"), cint,
+    err = ccall((:basiclu_solve_dense, libbasiclu), cint,
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                  cdbl_ptr, cdbl_ptr, Cchar),
@@ -349,7 +347,7 @@ function solve(this::BLU, rhs::spvector, trans::Char) # sparse solve
     m = convert(cint, this.xstore[BASICLU_DIM])
     @assert length(rhs) == m
     nzlhs = Ref{cint}(0)
-    err = ccall((:basiclu_solve_sparse, "libbasiclu.so"), cint,
+    err = ccall((:basiclu_solve_sparse, libbasiclu), cint,
                 (cint_ptr, cdbl_ptr,
                  cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                  cint, cint_ptr, cdbl_ptr,
@@ -399,7 +397,7 @@ function solve4update(this::BLU, rhs, getsolution::Bool=false)
     nzlhs = getsolution ? Ref{cint}(0) : C_NULL
     err = BASICLU_OK
     while true
-        err = ccall((:basiclu_solve_for_update, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_solve_for_update, libbasiclu), cint,
                     (cint_ptr, cdbl_ptr,
                      cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                      cint, cint_ptr, cdbl_ptr,
@@ -440,7 +438,7 @@ Return estimated error of the new pivot element.
 function update(this::BLU, xtbl::cdbl)
     err = BASICLU_OK
     while true
-        err = ccall((:basiclu_update, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_update, libbasiclu), cint,
                     (cint_ptr, cdbl_ptr,
                      cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr, cint_ptr, cdbl_ptr,
                      cdbl),
@@ -476,7 +474,7 @@ mutable struct basiclu_object
     realloc_factor::cdbl
     function basiclu_object(m::cint)
         obj = new()
-        err = ccall((:basiclu_obj_initialize, "libbasiclu.so"), cint,
+        err = ccall((:basiclu_obj_initialize, libbasiclu), cint,
                     (Ptr{basiclu_object}, cint),
                     pointer_from_objref(obj), m)
         if err != BASICLU_OK
@@ -484,14 +482,14 @@ mutable struct basiclu_object
             error(msg)
         end
         finalizer(obj) do x
-            ccall((:basiclu_obj_free, "libbasiclu.so"), Cvoid,
+            ccall((:basiclu_obj_free, libbasiclu), Cvoid,
                   (Ptr{basiclu_object},), pointer_from_objref(x))
         end
     end
 end
 
 function get_dim(obj::basiclu_object)
-    ccall((:basiclu_obj_get_dim, "libbasiclu.so"), cint,
+    ccall((:basiclu_obj_get_dim, libbasiclu), cint,
           (Ptr{basiclu_object},), pointer_from_objref(obj))
 end
 
@@ -514,7 +512,7 @@ function maxvolume(obj::basiclu_object, A::spmatrix, basis::Array{cint,1},
     Ai = A.rowval.-1
     Ax = A.nzval                # don't need a copy
     p_nupdate = Ref{cint}(0)
-    err = ccall((:basiclu_obj_maxvolume, "libbasiclu.so"), cint,
+    err = ccall((:basiclu_obj_maxvolume, libbasiclu), cint,
                 (Ptr{basiclu_object}, cint, Ptr{cint}, Ptr{cint}, Ptr{cdbl},
                  Ptr{cint}, Ptr{cint}, cdbl, Ptr{cint}),
                 pointer_from_objref(obj), n, Ap, Ai, Ax, cbasis, isbasic,
