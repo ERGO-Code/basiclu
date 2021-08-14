@@ -205,34 +205,27 @@ interface, user code must include \ct{basiclu.h}. Defined constants start with
 %-------------------------------------------------------------------------------
 \section{Julia interface}
 %-------------------------------------------------------------------------------
-BASICLU can be used from the Julia programming language. To do so, the package
-must be compiled and the \ct{lib/} directory must be added to the shared library
-load path of your system. Then run Julia and include the \ct{basiclu} module by
-\begin{verbatim}
-  include("path/to/BASICLU/Julia/basiclu.jl")
-\end{verbatim}
-The following is an example for a Julia program using BASICLU. See also the
-documentation of the module functions and \ct{Julia/test.jl}.
+BASICLU can be used from the Julia programming language. The easiest way is to
+install the \ct{basiclu\_jll} package. The following is an example for a Julia
+program using BASICLU. See also the documentation of the module functions and
+\ct{Julia/test.jl}.
 {\footnotesize
 \begin{verbatim}
 include("BASICLU/Julia/basiclu.jl")
 m = 1000
-this = basiclu.initialize(m)
+obj = basiclu.basiclu_object(m)
 B = sprand(m,m,5e-3) + I                     # get a sparse matrix
-err = basiclu.factorize(this, B)
-if err != basiclu.BASICLU_OK
-  error("factorization failed or singular")
-end
+basiclu.factorize(obj, B)
 rhs = randn(m)                               # get a right-hand side
-lhs = basiclu.solve(this, rhs, 'N')
+lhs = basiclu.solve(obj, rhs, 'N')
 res = norm(B*lhs-rhs,Inf)                    # compute residual
-col = sparsevec([1], [1.0], m)               # unit vector to be inserted into B
-lhs = basiclu.solve4update(this, col, true)
-(vmax,j) = findmax(abs.(lhs))
-xtbl = lhs[j]
-basiclu.solve4update(this, j)                # prepare to replace column j of B
-piverr = basiclu.update(this, xtbl)
-lhs = basiclu.solve(this, rhs, 'N')
+col = sparsevec([1], [1.0], m)               # vector to be inserted into B
+lhs = basiclu.solve_for_update(obj, col, getsol=true)
+vmax, j = findmax(abs.(lhs))
+piv = lhs[j]
+basiclu.solve_for_update(obj, j)            # prepare to replace column j of B
+piverr = basiclu.update(obj, piv)
+lhs = basiclu.solve(obj, rhs, 'N')
 B[:,j] = col
 res = norm(B*lhs-rhs,Inf)
 \end{verbatim}
