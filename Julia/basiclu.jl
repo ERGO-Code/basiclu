@@ -9,7 +9,13 @@ using LinearAlgebra: checksquare
 using Printf
 using SparseArrays
 using SparseArrays: getcolptr
-using basiclu_jll
+using Libdl
+
+if haskey(ENV, "JULIA_BASICLU_LIBRARY_PATH")
+  const libbasiclu = joinpath(ENV["JULIA_BASICLU_LIBRARY_PATH"], "libbasiclu.$dlext")
+else
+  using basiclu_jll
+end
 
 # comment out if the MAT module is installed
 # include("test.jl")

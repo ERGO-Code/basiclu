@@ -36,6 +36,7 @@ http://www.maths.ed.ac.uk/ERGO/preprints.html].
 
 %-------------------------------------------------------------------------------
 \section{Installation}
+\label{sec:install}
 %-------------------------------------------------------------------------------
 \subsection{Compiling BASICLU}
 Compiling BASICLU requires GNUmake and a C compiler that (partly) supports the
@@ -206,9 +207,15 @@ interface, user code must include \ct{basiclu.h}. Defined constants start with
 \section{Julia interface}
 %-------------------------------------------------------------------------------
 BASICLU can be used from the Julia programming language. The easiest way is to
-install the \ct{basiclu\_jll} package. The following is an example for a Julia
-program using BASICLU. See also the documentation of the module functions and
-\ct{Julia/test.jl}.
+install the artifact \ct{basiclu\_jll}, which provides a precompiled library.
+Alternatively the code can be compiled from source as described in
+Section~\ref{sec:install}. In this case ensure that \ct{int64\_t} is used as
+integer type (this is the default). To use the locally compiled library,
+environment variable \ct{JULIA\_BASICLU\_LIBRARY\_PATH} must point to the
+\ct{lib/} directory.
+
+The following is an example for a Julia program using BASICLU. See also the
+documentation of the module functions and \ct{Julia/test.jl}.
 {\footnotesize
 \begin{verbatim}
 include("BASICLU/Julia/basiclu.jl")
