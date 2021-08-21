@@ -1,3 +1,13 @@
+Aug 21, 2021: version 2.2
+
+	- Reimplement Julia interface.
+	  Implement Julia functions based on the object-oriented C
+	  interface. Add Julia structs for info and parameter values so
+  	  that user does not directly access the C arrays.
+
+	- Move maxvolume code from examples/ into the C library and add it
+	  to the Julia interface.
+
 May 06, 2019: version 2.1
 
 	- Reduce time of Markowitz search.
