@@ -460,22 +460,32 @@ Solve linear system with dense right-hand side. `rhs` is not modified. `trans`
 must be 'T' for transposed solve or 'N' for forward solve.
 """
 function solve(obj::basiclu_object, rhs::Vector{Float64}, trans::AbstractChar)
+    lhs = copy(rhs)
+    solve!(obj, lhs, trans)
+end
+
+"""
+    solve!(obj::basiclu_object, rhs::Vector{Float64}, trans::AbstractChar) -> Vector{Float64}
+
+Solve linear system with dense right-hand side. Solution overwrites `rhs`.
+`trans` must be 'T' for transposed solve or 'N' for forward solve.
+"""
+function solve!(obj::basiclu_object, rhs::Vector{Float64}, trans::AbstractChar)
     checktrans(trans)
     dim = getdim(obj)
     if length(rhs) != dim
         throw(DimensionMismatch("dimension of right-hand side does not match basiclu object"))
     end
-    lhs = Vector{Float64}(undef, dim)
     if dim != 0
         retcode = ccall((:basiclu_obj_solve_dense, libbasiclu), Int64,
                         (Ptr{basiclu_object},  Ptr{Float64}, Ptr{Float64}, Cchar),
-                        pointer_from_objref(obj), rhs, lhs, trans)
+                        pointer_from_objref(obj), rhs, rhs, trans)
         if retcode == BASICLU_ERROR_invalid_call
             throw(ErrorException("no factorization available"))
         end
         checkretcode("basiclu_obj_solve_dense", retcode)
     end
-    lhs
+    rhs
 end
 
 """
@@ -485,6 +495,17 @@ Solve linear system with sparse right-hand side. `rhs` is not modified. `trans`
 must be 'T' for transposed solve or 'N' for forward solve.
 """
 function solve(obj::basiclu_object, rhs::SparseVector{Float64, Int64}, trans::AbstractChar)
+    lhs = copy(rhs)
+    solve!(obj, lhs, trans)
+end
+
+"""
+    solve!(obj::basiclu_object, rhs::SparseVector{Float64, Int64}, trans::AbstractChar) -> SparseVector{Float64, Int64}
+
+Solve linear system with sparse right-hand side. Solution overwrites `rhs`.
+`trans` must be 'T' for transposed solve or 'N' for forward solve.
+"""
+function solve!(obj::basiclu_object, rhs::SparseVector{Float64, Int64}, trans::AbstractChar)
     checktrans(trans)
     dim = getdim(obj)
     if length(rhs) != dim
@@ -500,7 +521,7 @@ function solve(obj::basiclu_object, rhs::SparseVector{Float64, Int64}, trans::Ab
         throw(ErrorException("no factorization available"))
     end
     checkretcode("basiclu_obj_solve_sparse", retcode)
-    gathersol(obj)
+    gathersol!(obj, rhs)
 end
 
 """
@@ -692,15 +713,27 @@ function gathersol(obj::basiclu_object)
     dim = getdim(obj)
     nzind = Vector{Int64}(undef, obj.nzlhs)
     nzval = Vector{Float64}(undef, obj.nzlhs)
-    for i = 1:obj.nzlhs
-        nzind[i] = unsafe_load(obj.ilhs, i) + 1
-        @assert nzind[i] >= 1 && nzind[i] <= dim
-        nzval[i] = unsafe_load(obj.lhs, nzind[i])
+    lhs = SparseVector{Float64, Int64}(dim, nzind, nzval)
+    gathersol!(obj, lhs)
+end
+
+function gathersol!(obj::basiclu_object, lhs::SparseVector{Float64, Int64})
+    dim = getdim(obj)
+    @assert length(lhs) == dim
+    if nnz(lhs) != obj.nzlhs
+        resize!(lhs.nzind, obj.nzlhs)
+        resize!(lhs.nzval, obj.nzlhs)
     end
-    p = sortperm(nzind)
-    nzind = nzind[p]
-    nzval = nzval[p]
-    SparseVector{Float64, Int64}(dim, nzind, nzval)
+    for i = 1:obj.nzlhs
+        idx = unsafe_load(obj.ilhs, i) + 1
+        @assert idx >= 1 && idx <= dim
+        lhs.nzind[i] = idx
+        lhs.nzval[i] = unsafe_load(obj.lhs, idx)
+    end
+    p = sortperm(lhs.nzind)
+    lhs.nzind[:] = lhs.nzind[p]
+    lhs.nzval[:] = lhs.nzval[p]
+    lhs
 end
 
 end
